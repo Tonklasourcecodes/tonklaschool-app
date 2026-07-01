@@ -7,7 +7,7 @@ import AppShell from "@/components/AppShell";
 const noto = Noto_Sans_Thai({
   variable: "--font-body",
   subsets: ["thai", "latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {

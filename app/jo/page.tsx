@@ -2,443 +2,262 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Search, Plus, Hammer, ChevronRight, SlidersHorizontal, X } from "lucide-react";
-import { SkeletonTableRow } from "@/components/Skeleton";
+import { Search, Plus, ChevronRight, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { JO } from "@/lib/types-po";
 
-const STATUS_MAP: Record<string, { dot: string; label: string; pill: string; text: string }> = {
-  "รออนุมัติ":   { dot: "#D97706", label: "รออนุมัติ",   pill: "#FEF3C7", text: "#92400E" },
-  "อนุมัติแล้ว": { dot: "#16A34A", label: "อนุมัติแล้ว", pill: "#DCFCE7", text: "#14532D" },
-  "ยกเลิก":     { dot: "#DC2626", label: "ยกเลิก",     pill: "#FEE2E2", text: "#991B1B" },
+const S = {
+  "รออนุมัติ":   { bg: "#FEF3C7", text: "#92400E", dot: "#D97706" },
+  "อนุมัติแล้ว": { bg: "#DCFCE7", text: "#14532D", dot: "#16A34A" },
+  "ยกเลิก":     { bg: "#FEE2E2", text: "#991B1B", dot: "#DC2626" },
 };
 
-function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_MAP[status];
-  if (!s) return <span className="text-xs" style={{ color: "#B4A99E" }}>—</span>;
+function Badge({ status }: { status: string }) {
+  const s = S[status as keyof typeof S];
+  if (!s) return <span style={{ fontSize: 11, color: "#B4A99E" }}>—</span>;
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: s.pill, color: s.text }}>
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: s.dot }} />
-      {s.label}
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: s.bg, color: s.text }}>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: s.dot, flexShrink: 0 }} />{status}
     </span>
   );
 }
 
 function fmt(val: string) {
   const n = parseFloat((val ?? "").replace(/,/g, ""));
-  if (isNaN(n)) return "—";
-  return n.toLocaleString("th-TH", { minimumFractionDigits: 2 }) + " ฿";
+  return isNaN(n) ? "—" : n.toLocaleString("th-TH", { maximumFractionDigits: 0 }) + " ฿";
 }
 
-function parseTHDate(d: string): Date | null {
-  const parts = (d ?? "").split("/");
-  if (parts.length !== 3) return null;
-  const [day, month, year] = parts;
-  const ce = parseInt(year) > 2500 ? parseInt(year) - 543 : parseInt(year);
-  const dt = new Date(ce, parseInt(month) - 1, parseInt(day));
+function parseTH(d: string) {
+  const p = (d ?? "").split("/");
+  if (p.length !== 3) return null;
+  const ce = parseInt(p[2]) > 2500 ? parseInt(p[2]) - 543 : parseInt(p[2]);
+  const dt = new Date(ce, parseInt(p[1]) - 1, parseInt(p[0]));
   return isNaN(dt.getTime()) ? null : dt;
 }
 
-const DATE_PRESETS = [
-  { key: "all",    label: "ทั้งหมด" },
-  { key: "month",  label: "เดือนนี้" },
-  { key: "3month", label: "3 เดือน" },
-  { key: "year",   label: "ปีนี้" },
+const DATE_OPTS = [
+  { k: "all", l: "ทั้งหมด" }, { k: "month", l: "เดือนนี้" },
+  { k: "3month", l: "3 เดือน" }, { k: "year", l: "ปีนี้" },
 ];
-
-const STATUS_FILTERS = [
-  { key: "all",        label: "ทุกสถานะ" },
-  { key: "รออนุมัติ",   label: "รออนุมัติ" },
-  { key: "อนุมัติแล้ว", label: "อนุมัติแล้ว" },
-  { key: "ยกเลิก",     label: "ยกเลิก" },
+const STATUS_OPTS = [
+  { k: "all", l: "ทุกสถานะ" }, { k: "รออนุมัติ", l: "รออนุมัติ" },
+  { k: "อนุมัติแล้ว", l: "อนุมัติแล้ว" }, { k: "ยกเลิก", l: "ยกเลิก" },
 ];
 
 export default function JOListPage() {
   const router = useRouter();
   const [jos, setJos] = useState<JO[]>([]);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [requesterFilter, setRequesterFilter] = useState("all");
+  const [statusF, setStatusF] = useState("all");
+  const [dateF, setDateF] = useState("all");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [pageSize, setPageSize] = useState(30);
-
+  const [pageSize, setPageSize] = useState(40);
   const now = new Date();
 
   useEffect(() => {
     setLoading(true);
-    fetch("/api/jo?q=")
-      .then((r) => r.json())
-      .then((d) => { if (d.error) throw new Error(d.error); setJos(d.jos ?? []); })
-      .catch((e) => setError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด"))
+    fetch("/api/jo?q=").then(r => r.json())
+      .then(d => setJos(d.jos ?? []))
       .finally(() => setLoading(false));
   }, []);
 
-  const requesters = useMemo(
-    () => ["all", ...Array.from(new Set(jos.map((j) => j.requester).filter(Boolean))).sort()],
-    [jos]
-  );
+  useEffect(() => { setPageSize(40); }, [search, statusF, dateF]);
 
-  function inDateRange(dateStr: string) {
-    if (dateFilter === "all") return true;
-    const d = parseTHDate(dateStr);
-    if (!d) return false;
-    if (dateFilter === "month") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    if (dateFilter === "3month") { const c = new Date(now); c.setMonth(c.getMonth() - 3); return d >= c; }
-    if (dateFilter === "year") return d.getFullYear() === now.getFullYear();
+  function inRange(ds: string) {
+    if (dateF === "all") return true;
+    const d = parseTH(ds); if (!d) return false;
+    if (dateF === "month") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    if (dateF === "3month") { const c = new Date(now); c.setMonth(c.getMonth() - 3); return d >= c; }
+    if (dateF === "year") return d.getFullYear() === now.getFullYear();
     return true;
   }
 
   const displayed = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return jos.filter((jo) => {
-      const matchSearch = !q || [jo.joNumber, jo.supplierName, jo.requester, jo.location].join(" ").toLowerCase().includes(q);
-      const matchStatus = statusFilter === "all" || jo.approvalStatus === statusFilter;
-      const matchDate = inDateRange(jo.startDate);
-      const matchReq = requesterFilter === "all" || jo.requester === requesterFilter;
-      return matchSearch && matchStatus && matchDate && matchReq;
-    });
-  }, [jos, search, statusFilter, dateFilter, requesterFilter]);
+    return jos.filter(j =>
+      (!q || [j.joNumber, j.supplierName, j.requester, j.location].join(" ").toLowerCase().includes(q)) &&
+      (statusF === "all" || j.approvalStatus === statusF) &&
+      inRange(j.startDate)
+    );
+  }, [jos, search, statusF, dateF]);
 
   const counts = useMemo(() => {
     const r: Record<string, number> = { all: jos.length };
-    for (const jo of jos) r[jo.approvalStatus] = (r[jo.approvalStatus] ?? 0) + 1;
+    for (const j of jos) r[j.approvalStatus] = (r[j.approvalStatus] ?? 0) + 1;
     return r;
   }, [jos]);
 
-  const totalValue = useMemo(() =>
-    displayed.reduce((sum, jo) => sum + (parseFloat((jo.grandTotal || "0").replace(/,/g, "")) || 0), 0),
-    [displayed]
-  );
-
-  const activeFilterCount = [
-    statusFilter !== "all",
-    dateFilter !== "all",
-    requesterFilter !== "all",
-  ].filter(Boolean).length;
-
-  useEffect(() => { setPageSize(30); }, [search, statusFilter, dateFilter, requesterFilter]);
-
-  function clearFilters() {
-    setStatusFilter("all");
-    setDateFilter("all");
-    setRequesterFilter("all");
-  }
-
+  const totalValue = useMemo(() => displayed.reduce((s, j) => s + (parseFloat((j.grandTotal || "0").replace(/,/g, "")) || 0), 0), [displayed]);
   const paged = displayed.slice(0, pageSize);
-  const hasMore = displayed.length > pageSize;
+  const anyFilter = statusF !== "all" || dateF !== "all" || search !== "";
 
   return (
-    <div className="min-h-full" style={{ background: "var(--bg)" }}>
-      {/* Page header */}
-      <div style={{ padding: "28px 32px 20px", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div style={{ minHeight: "100%", background: "#F0EDE9" }}>
+
+      {/* ── Big header ── */}
+      <div style={{ padding: "44px 44px 0" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "#1C1815", letterSpacing: "-0.025em" }}>ใบจ้างงาน (JO)</h1>
-            <p style={{ fontSize: 13, color: "#9C9289", marginTop: 4 }}>
-              {loading ? "กำลังโหลด..." : `${jos.length} รายการทั้งหมด`}
-            </p>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#9C9289", marginBottom: 8 }}>จัดซื้อ / จัดจ้าง</p>
+            <h1 style={{ fontSize: "clamp(2.8rem,5vw,4rem)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 0.95, color: "#1C1815", margin: 0 }}>
+              ใบสั่งจ้าง
+              <br />
+              <span style={{ color: "#7C3AED" }}>JO</span>
+            </h1>
           </div>
-          <Link
-            href="/jo/new"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
-            style={{
-              color: "white",
-              background: "#059669",
-              boxShadow: "0 2px 10px rgba(5,150,105,0.25)",
-              textDecoration: "none",
-            }}
-          >
-            <Plus size={15} strokeWidth={2.5} />
-            สร้าง JO ใหม่
+          <Link href="/jo/new" style={{
+            display: "flex", alignItems: "center", gap: 8, padding: "13px 24px", borderRadius: 16,
+            background: "#7C3AED", color: "white", fontWeight: 800, fontSize: 14,
+            textDecoration: "none", boxShadow: "0 4px 20px rgba(124,58,237,0.3)", letterSpacing: "-0.01em",
+          }}>
+            <Plus size={15} strokeWidth={2.5} /> สร้าง JO ใหม่
           </Link>
         </div>
 
-        {/* Summary chips */}
-        {!loading && (
-          <div className="flex items-center gap-2 flex-wrap mt-4">
-            {Object.entries(STATUS_MAP).map(([key, s]) => (
-              <button
-                key={key}
-                onClick={() => setStatusFilter(statusFilter === key ? "all" : key)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                style={{
-                  background: statusFilter === key ? s.pill : "white",
-                  color: statusFilter === key ? s.text : "#9C9289",
-                  border: statusFilter === key ? `1px solid ${s.dot}50` : "1px solid rgba(0,0,0,0.08)",
-                }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusFilter === key ? s.dot : "#D4C8BC" }} />
-                {key}
-                <span className="font-bold tabular-nums">{counts[key] ?? 0}</span>
-              </button>
-            ))}
-            <div className="ml-auto text-right">
-              <span className="text-xs" style={{ color: "#B4A99E" }}>ยอดรวมที่แสดง</span>
-              <div className="text-sm font-bold tabular-nums" style={{ color: "#059669" }}>
-                {totalValue.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿
+        {/* Stat strip */}
+        <div style={{ display: "flex", gap: 0, marginBottom: 32, borderTop: "1px solid rgba(0,0,0,0.07)", paddingTop: 24 }}>
+          {[
+            { label: "ทั้งหมด", value: counts.all ?? 0, accent: "#1C1815" },
+            { label: "รออนุมัติ", value: counts["รออนุมัติ"] ?? 0, accent: "#D97706" },
+            { label: "อนุมัติแล้ว", value: counts["อนุมัติแล้ว"] ?? 0, accent: "#7C3AED" },
+            { label: "ยกเลิก", value: counts["ยกเลิก"] ?? 0, accent: "#DC2626" },
+          ].map((s, i) => (
+            <div key={s.label} style={{ flex: 1, paddingRight: 24, borderRight: i < 3 ? "1px solid rgba(0,0,0,0.07)" : "none", paddingLeft: i > 0 ? 24 : 0 }}>
+              <div style={{ fontSize: "clamp(1.8rem,3vw,2.6rem)", fontWeight: 900, letterSpacing: "-0.05em", color: loading ? "#D4C8BC" : s.accent, lineHeight: 1, marginBottom: 4 }}>
+                {loading ? "—" : s.value.toLocaleString()}
               </div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#9C9289" }}>{s.label}</div>
+            </div>
+          ))}
+          <div style={{ flex: 1.5, paddingLeft: 24 }}>
+            <div style={{ fontSize: "clamp(1.2rem,2vw,1.8rem)", fontWeight: 900, letterSpacing: "-0.04em", color: "#1C1815", lineHeight: 1, marginBottom: 4 }}>
+              {loading ? "—" : totalValue.toLocaleString("th-TH", { maximumFractionDigits: 0 })}
+              <span style={{ fontSize: "0.45em", color: "#9C9289", marginLeft: 5 }}>฿</span>
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#9C9289" }}>
+              {displayed.length !== jos.length ? `มูลค่า (${displayed.length} รายการ)` : "มูลค่ารวม"}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Filters ── */}
+      <div style={{ padding: "0 44px 24px", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ position: "relative", flex: "1 1 220px" }}>
+          <Search size={13} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#B4A99E" }} />
+          <input
+            style={{ width: "100%", paddingLeft: 36, paddingRight: search ? 32 : 14, paddingTop: 10, paddingBottom: 10, background: "white", border: "1.5px solid rgba(0,0,0,0.07)", borderRadius: 14, fontSize: 13, color: "#1C1815", outline: "none", boxSizing: "border-box" }}
+            placeholder="ค้นหา JO, ผู้รับจ้าง, สถานที่..."
+            value={search} onChange={e => setSearch(e.target.value)}
+          />
+          {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#B4A99E" }}><X size={13} /></button>}
+        </div>
+
+        <div style={{ display: "flex", gap: 6 }}>
+          {STATUS_OPTS.map(o => {
+            const active = statusF === o.k;
+            const s = S[o.k as keyof typeof S];
+            return (
+              <button key={o.k} onClick={() => setStatusF(o.k)} style={{
+                padding: "8px 14px", borderRadius: 12, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
+                background: active ? (s?.bg ?? "#1C1815") : "white",
+                color: active ? (s?.text ?? "white") : "#78716C",
+                boxShadow: active ? "none" : "0 1px 3px rgba(0,0,0,0.05)",
+              }}>{o.l}{o.k !== "all" && ` ${counts[o.k] ?? 0}`}</button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: "flex", gap: 6 }}>
+          {DATE_OPTS.map(o => (
+            <button key={o.k} onClick={() => setDateF(o.k)} style={{
+              padding: "8px 14px", borderRadius: 12, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
+              background: dateF === o.k ? "#0D1F14" : "white",
+              color: dateF === o.k ? "#34d399" : "#78716C",
+              boxShadow: dateF === o.k ? "none" : "0 1px 3px rgba(0,0,0,0.05)",
+            }}>{o.l}</button>
+          ))}
+        </div>
+
+        {anyFilter && (
+          <button onClick={() => { setSearch(""); setStatusF("all"); setDateF("all"); }} style={{
+            padding: "8px 14px", borderRadius: 12, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
+            background: "#FEE2E2", color: "#991B1B",
+          }}>ล้างทั้งหมด</button>
         )}
       </div>
 
-      <div className="px-4 md:px-8 py-5">
-        {/* Search + filter toggle */}
-        <div className="flex items-center gap-3 mb-4">
-          <div className="relative flex-1">
-            <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "#B4A99E" }} />
-            <input
-              className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl outline-none transition-all"
-              style={{ background: "white", border: "1px solid rgba(0,0,0,0.08)", color: "#1C1917", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
-              placeholder="ค้นหาเลขที่ JO ชื่อผู้รับจ้าง สถานที่..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onFocus={(e) => { e.target.style.borderColor = "#7C3AED"; e.target.style.boxShadow = "0 0 0 3px rgba(124,58,237,0.1)"; }}
-              onBlur={(e) => { e.target.style.borderColor = "rgba(0,0,0,0.08)"; e.target.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)"; }}
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters((v) => !v)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
-            style={{
-              background: showFilters || activeFilterCount > 0 ? "#F5F3FF" : "white",
-              color: showFilters || activeFilterCount > 0 ? "#7C3AED" : "#78716C",
-              border: showFilters || activeFilterCount > 0 ? "1px solid #DDD6FE" : "1px solid rgba(0,0,0,0.08)",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-            }}
-          >
-            <SlidersHorizontal size={14} />
-            ตัวกรอง
-            {activeFilterCount > 0 && (
-              <span className="text-xs font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#7C3AED", color: "white" }}>
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {/* Expanded filters */}
-        {showFilters && (
-          <div
-            className="bg-white rounded-2xl p-4 mb-4 space-y-4"
-            style={{ border: "1px solid rgba(124,58,237,0.12)", boxShadow: "0 2px 12px rgba(124,58,237,0.06)" }}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">ตัวกรองเพิ่มเติม</span>
-              {activeFilterCount > 0 && (
-                <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors">
-                  <X size={12} /> ล้างทั้งหมด
-                </button>
-              )}
-            </div>
-
-            {/* Date filter */}
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">ช่วงเวลา (วันเริ่มงาน)</p>
-              <div className="flex gap-2 flex-wrap">
-                {DATE_PRESETS.map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => setDateFilter(key)}
-                    className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                    style={{
-                      background: dateFilter === key ? "#7C3AED" : "#F8FAFC",
-                      color: dateFilter === key ? "white" : "#64748B",
-                      border: dateFilter === key ? "none" : "1px solid #E2E8F0",
-                    }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Status filter */}
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">สถานะ</p>
-              <div className="flex gap-2 flex-wrap">
-                {STATUS_FILTERS.map(({ key, label }) => {
-                  const s = STATUS_MAP[key];
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setStatusFilter(key)}
-                      className="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                      style={{
-                        background: statusFilter === key ? (s?.pill ?? "#F5F3FF") : "#F8FAFC",
-                        color: statusFilter === key ? (s?.text ?? "#7C3AED") : "#64748B",
-                        border: statusFilter === key ? `1px solid ${s?.dot ?? "#7C3AED"}40` : "1px solid #E2E8F0",
-                      }}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Requester filter */}
-            <div>
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">ผู้สั่งจ้าง</p>
-              <div className="relative inline-block">
-                <select
-                  value={requesterFilter}
-                  onChange={(e) => setRequesterFilter(e.target.value)}
-                  className="appearance-none pl-3 pr-8 py-2 text-sm rounded-lg outline-none transition-all"
-                  style={{
-                    background: requesterFilter !== "all" ? "#F5F3FF" : "#F8FAFC",
-                    border: requesterFilter !== "all" ? "1px solid #DDD6FE" : "1px solid #E2E8F0",
-                    color: requesterFilter !== "all" ? "#5B21B6" : "#374151",
-                    fontWeight: requesterFilter !== "all" ? 600 : 400,
-                  }}
-                >
-                  <option value="all">ทุกคน</option>
-                  {requesters.filter((r) => r !== "all").map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-                <ChevronRight size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none text-slate-400" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <div className="mb-4 text-sm px-4 py-3 rounded-xl" style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FEE2E2" }}>
-            {error}
-          </div>
-        )}
-
-        {/* Table */}
-        <div
-          className="bg-white rounded-2xl overflow-hidden"
-          style={{ border: "1px solid rgba(0,0,0,0.055)", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
-        >
+      {/* ── Table ── */}
+      <div style={{ padding: "0 44px 48px" }}>
+        <div style={{ background: "white", borderRadius: 24, overflow: "hidden", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
           {loading ? (
-            <table className="w-full">
-              <tbody>
-                {Array.from({ length: 8 }).map((_, i) => <SkeletonTableRow key={i} cols={7} />)}
-              </tbody>
-            </table>
+            <div style={{ padding: 24 }}>
+              {[...Array(8)].map((_, i) => <div key={i} style={{ height: 52, borderRadius: 12, background: "#F5F2EE", marginBottom: 8 }} />)}
+            </div>
           ) : displayed.length === 0 ? (
-            <div className="p-14 text-center">
-              <Hammer size={32} className="mx-auto mb-3" style={{ color: "#D4C8BC" }} />
-              <p className="text-sm font-semibold" style={{ color: "#A8A29E" }}>ไม่พบใบจ้าง</p>
-              <p className="text-xs mt-1" style={{ color: "#C4B9AD" }}>ลองเปลี่ยนตัวกรอง หรือสร้าง JO ใหม่</p>
-              {activeFilterCount > 0 && (
-                <button onClick={clearFilters} className="mt-3 text-xs font-semibold" style={{ color: "#7C3AED" }}>
-                  ล้างตัวกรอง →
-                </button>
-              )}
+            <div style={{ padding: 60, textAlign: "center" }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🔨</div>
+              <p style={{ fontSize: 15, fontWeight: 700, color: "#A8A29E", marginBottom: 4 }}>ไม่พบใบจ้างงาน</p>
+              <p style={{ fontSize: 12, color: "#C4B9AD" }}>ลองเปลี่ยนตัวกรอง หรือสร้าง JO ใหม่</p>
             </div>
           ) : (
             <>
-              {/* Mobile card list */}
-              <div className="md:hidden divide-y divide-slate-50">
-                {paged.map((jo) => (
-                  <div
-                    key={jo.joNumber}
-                    onClick={() => router.push(`/jo/${jo.joNumber.replace(/\//g, "~")}`)}
-                    className="flex items-center gap-3 px-4 py-3.5 cursor-pointer active:bg-slate-50"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-md" style={{ background: "#F5F3FF", color: "#6D28D9" }}>
-                          {jo.joNumber}
-                        </span>
-                        <StatusBadge status={jo.approvalStatus} />
-                      </div>
-                      <p className="text-sm font-semibold truncate" style={{ color: "#1C1917" }}>{jo.supplierName}</p>
-                      <p className="text-xs mt-0.5" style={{ color: "#A8A29E" }}>
-                        {jo.requester || "—"} · {jo.startDate || "—"}{jo.location ? ` · ${jo.location}` : ""}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-sm font-bold tabular-nums" style={{ color: "#1C1917" }}>{fmt(jo.grandTotal)}</p>
-                      <ChevronRight size={14} style={{ color: "#D4C8BC", marginLeft: "auto", marginTop: 4 }} />
-                    </div>
-                  </div>
+              <div style={{ display: "grid", gridTemplateColumns: "150px 1fr 110px 160px auto 130px", gap: 12, padding: "11px 24px", background: "rgba(0,0,0,0.015)", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
+                {["เลขที่ JO", "ผู้รับจ้าง / สถานที่", "ผู้สั่งจ้าง", "ช่วงเวลา", "มูลค่า", "สถานะ"].map(h => (
+                  <div key={h} style={{ fontSize: 9, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.12em", color: "#C4B9AD" }}>{h}</div>
                 ))}
               </div>
 
-              {/* Desktop table */}
-              <table className="hidden md:table w-full">
-                <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.05)", background: "rgba(0,0,0,0.01)" }}>
-                    {["เลขที่ JO", "ผู้รับจ้าง", "สถานที่", "วันเริ่ม – สิ้นสุด", "ผู้สั่งจ้าง", "มูลค่างาน", "สถานะ", ""].map((h) => (
-                      <th key={h} className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: "#B4A99E" }}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {paged.map((jo) => (
-                    <tr
-                      key={jo.joNumber}
-                      onClick={() => router.push(`/jo/${jo.joNumber.replace(/\//g, "~")}`)}
-                      className="cursor-pointer group transition-all duration-100"
-                      style={{ borderBottom: "1px solid rgba(0,0,0,0.035)" }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#FAFAFF"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                    >
-                      <td className="px-4 py-4">
-                        <span className="text-xs font-bold font-mono px-2.5 py-1.5 rounded-lg" style={{ background: "#F5F3FF", color: "#6D28D9" }}>
-                          {jo.joNumber}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="text-[13px] font-semibold" style={{ color: "#1C1917" }}>{jo.supplierName}</div>
-                      </td>
-                      <td className="px-4 py-4 text-[13px]" style={{ color: "#78716C" }}>
-                        {jo.location || "—"}
-                      </td>
-                      <td className="px-4 py-4 text-[12px] tabular-nums leading-relaxed" style={{ color: "#78716C" }}>
-                        <div>{jo.startDate || "—"}</div>
-                        {jo.endDate && <div style={{ color: "#B4A99E" }}>ถึง {jo.endDate}</div>}
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="text-xs font-medium px-2 py-1 rounded-lg" style={{ background: "#F8FAFC", color: "#475569" }}>
-                          {jo.requester || "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <span className="text-[13px] font-bold tabular-nums" style={{ color: "#1C1917" }}>
-                          {fmt(jo.grandTotal)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <StatusBadge status={jo.approvalStatus} />
-                      </td>
-                      <td className="px-3 py-4">
-                        <ChevronRight size={15} className="transition-transform group-hover:translate-x-0.5" style={{ color: "#D4C8BC" }} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {hasMore && (
-                <div className="px-4 py-3 text-center" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
-                  <button
-                    onClick={() => setPageSize((p) => p + 30)}
-                    className="text-xs font-semibold px-4 py-2 rounded-lg transition-colors"
-                    style={{ background: "#F5F3FF", color: "#7C3AED" }}
-                  >
-                    แสดงเพิ่ม ({displayed.length - pageSize} รายการที่เหลือ)
-                  </button>
+              {paged.map((jo, i) => (
+                <div key={jo.joNumber}
+                  onClick={() => router.push(`/jo/${jo.joNumber.replace(/\//g, "~")}`)}
+                  style={{
+                    display: "grid", gridTemplateColumns: "150px 1fr 110px 160px auto 130px", gap: 12, alignItems: "center",
+                    padding: "16px 24px", borderBottom: i < paged.length - 1 ? "1px solid rgba(0,0,0,0.04)" : "none",
+                    cursor: "pointer", transition: "background 0.1s",
+                  }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#FAFAFF"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ""}
+                >
+                  <div>
+                    <span style={{ fontFamily: "monospace", fontSize: 11, fontWeight: 800, padding: "4px 9px", borderRadius: 7, background: "#F5F3FF", color: "#6D28D9" }}>{jo.joNumber}</span>
+                    <div style={{ fontSize: 10, color: "#B4A99E", marginTop: 4 }}>{jo.startDate || "—"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "#1C1815", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{jo.supplierName}</div>
+                    {jo.location && <div style={{ fontSize: 11, color: "#9C9289", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{jo.location}</div>}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#78716C", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{jo.requester || "—"}</div>
+                  <div style={{ fontSize: 11, color: "#9C9289" }}>
+                    <div>{jo.startDate || "—"}</div>
+                    {jo.endDate && <div style={{ color: "#B4A99E" }}>→ {jo.endDate}</div>}
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: "#1C1815", textAlign: "right", whiteSpace: "nowrap" }}>{fmt(jo.grandTotal)}</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Badge status={jo.approvalStatus} />
+                    <ChevronRight size={13} style={{ color: "#D4C8BC" }} />
+                  </div>
                 </div>
-              )}
-              <div className="px-4 py-3 flex items-center justify-between" style={{ borderTop: "1px solid rgba(0,0,0,0.04)", background: "rgba(0,0,0,0.01)" }}>
-                <p className="text-xs" style={{ color: "#B4A99E" }}>
-                  แสดง <span className="font-semibold" style={{ color: "#78716C" }}>{paged.length}</span> จาก {displayed.length} รายการ
-                  {displayed.length !== jos.length && ` (กรองจาก ${jos.length})`}
-                </p>
-                <p className="text-xs font-semibold" style={{ color: "#7C3AED" }}>
-                  ยอดรวม: {totalValue.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿
-                </p>
+              ))}
+
+              <div style={{ padding: "12px 24px", borderTop: "1px solid rgba(0,0,0,0.04)", background: "rgba(0,0,0,0.01)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 11, color: "#B4A99E" }}>
+                  แสดง <strong style={{ color: "#78716C" }}>{paged.length}</strong> จาก {displayed.length} รายการ
+                  {displayed.length !== jos.length && ` · กรองจาก ${jos.length}`}
+                </span>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {displayed.length > pageSize && (
+                    <button onClick={() => setPageSize(p => p + 40)} style={{
+                      fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 10, border: "none", cursor: "pointer",
+                      background: "#F5F3FF", color: "#6D28D9",
+                    }}>
+                      แสดงเพิ่ม {displayed.length - pageSize} รายการ
+                    </button>
+                  )}
+                  <span style={{ fontSize: 12, fontWeight: 800, color: "#7C3AED" }}>
+                    {totalValue.toLocaleString("th-TH", { maximumFractionDigits: 0 })} ฿
+                  </span>
+                </div>
               </div>
             </>
           )}
