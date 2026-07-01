@@ -171,37 +171,25 @@ export default function PODetailPage() {
 
       <div className="px-8 py-6 max-w-3xl mx-auto space-y-4">
 
-        {/* ── Hero card ─────────────────────────── */}
+        {/* ── Summary card ──────────────────────── */}
         <div
-          className="relative overflow-hidden rounded-2xl p-6"
-          style={{
-            background: "linear-gradient(135deg, #0A3320 0%, #062315 100%)",
-            boxShadow: "0 4px 24px rgba(5,40,15,0.25)",
-          }}
+          className="rounded-2xl p-5 flex items-start justify-between gap-4"
+          style={{ background: "white", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}
         >
-          <div style={{
-            position: "absolute", inset: 0, opacity: 0.05,
-            backgroundImage: "radial-gradient(circle, #34d399 1px, transparent 1px)",
-            backgroundSize: "20px 20px", pointerEvents: "none",
-          }} />
-          <div style={{ position: "absolute", top: -40, right: -40, width: 200, height: 200, background: "radial-gradient(circle, rgba(52,211,153,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
-
-          <div className="relative flex items-start justify-between gap-4">
-            <div>
-              <p style={{ color: "rgba(52,211,153,0.55)", fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 6 }}>
-                ใบสั่งซื้อ · {po.orderDate || "—"}
-              </p>
-              <h1 style={{ fontFamily: "var(--font-display)", fontSize: "1.75rem", fontWeight: 800, color: "white", letterSpacing: "-0.02em", lineHeight: 1.1, marginBottom: 6 }}>
-                {poNumber}
-              </h1>
-              <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13 }}>{po.supplierName}</p>
-            </div>
-            <div className="text-right shrink-0">
-              <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginBottom: 4 }}>ยอดรวม</p>
-              <p style={{ fontFamily: "var(--font-display)", fontSize: "1.55rem", fontWeight: 800, color: "#34d399", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
-                {fmt(po.grandTotal)}
-              </p>
-            </div>
+          <div>
+            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9C9289", marginBottom: 6 }}>
+              ใบสั่งซื้อ · {po.orderDate || "—"}
+            </p>
+            <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#1C1815", letterSpacing: "-0.02em", lineHeight: 1.1, marginBottom: 4 }}>
+              {poNumber}
+            </h1>
+            <p style={{ color: "#78716C", fontSize: 13 }}>{po.supplierName}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p style={{ color: "#9C9289", fontSize: 11, marginBottom: 4 }}>ยอดรวม</p>
+            <p style={{ fontSize: "1.4rem", fontWeight: 800, color: "#059669", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>
+              {fmt(po.grandTotal)}
+            </p>
           </div>
         </div>
 

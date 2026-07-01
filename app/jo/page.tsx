@@ -132,32 +132,22 @@ export default function JOListPage() {
 
   return (
     <div className="min-h-full" style={{ background: "var(--bg)" }}>
-      {/* Page header — dark hero (violet) */}
-      <div
-        className="relative overflow-hidden px-8 pt-7 pb-6"
-        style={{ background: "linear-gradient(135deg, #160826 0%, #2E0F5A 55%, #120620 100%)" }}
-      >
-        <div style={{ position: "absolute", inset: 0, opacity: 0.05, backgroundImage: "radial-gradient(circle, #a78bfa 1px, transparent 1px)", backgroundSize: "22px 22px", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", top: -60, right: -40, width: 280, height: 280, background: "radial-gradient(circle, rgba(167,139,250,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
-
-        <div className="relative flex items-center justify-between mb-5">
+      {/* Page header */}
+      <div style={{ padding: "28px 32px 20px", borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <p style={{ color: "rgba(167,139,250,0.55)", fontSize: 10, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: 6 }}>
-              โรงเรียนต้นกล้า · ระบบจัดซื้อ
-            </p>
-            <h1 style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 800, color: "white", letterSpacing: "-0.025em", lineHeight: 1.1 }}>
-              ใบจ้าง <span style={{ color: "#a78bfa" }}>(JO)</span>
-            </h1>
-            <p className="text-sm mt-1.5" style={{ color: "rgba(255,255,255,0.38)" }}>
+            <h1 style={{ fontSize: "1.6rem", fontWeight: 800, color: "#1C1815", letterSpacing: "-0.025em" }}>ใบจ้างงาน (JO)</h1>
+            <p style={{ fontSize: 13, color: "#9C9289", marginTop: 4 }}>
               {loading ? "กำลังโหลด..." : `${jos.length} รายการทั้งหมด`}
             </p>
           </div>
           <Link
             href="/jo/new"
-            className="relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:-translate-y-0.5"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
             style={{
-              background: "linear-gradient(135deg, #a78bfa, #7c3aed)",
-              boxShadow: "0 4px 18px rgba(124,58,237,0.4)",
+              color: "white",
+              background: "#059669",
+              boxShadow: "0 2px 10px rgba(5,150,105,0.25)",
               textDecoration: "none",
             }}
           >
@@ -168,28 +158,26 @@ export default function JOListPage() {
 
         {/* Summary chips */}
         {!loading && (
-          <div className="relative flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap mt-4">
             {Object.entries(STATUS_MAP).map(([key, s]) => (
               <button
                 key={key}
                 onClick={() => setStatusFilter(statusFilter === key ? "all" : key)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
                 style={{
-                  background: statusFilter === key ? s.pill : "rgba(255,255,255,0.1)",
-                  color: statusFilter === key ? s.text : "rgba(255,255,255,0.55)",
-                  border: statusFilter === key ? `1px solid ${s.dot}50` : "1px solid rgba(255,255,255,0.1)",
-                  backdropFilter: "blur(8px)",
-                  boxShadow: statusFilter === key ? `0 2px 10px ${s.dot}30` : "none",
+                  background: statusFilter === key ? s.pill : "white",
+                  color: statusFilter === key ? s.text : "#9C9289",
+                  border: statusFilter === key ? `1px solid ${s.dot}50` : "1px solid rgba(0,0,0,0.08)",
                 }}
               >
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusFilter === key ? s.dot : "rgba(255,255,255,0.4)" }} />
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: statusFilter === key ? s.dot : "#D4C8BC" }} />
                 {key}
                 <span className="font-bold tabular-nums">{counts[key] ?? 0}</span>
               </button>
             ))}
             <div className="ml-auto text-right">
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>ยอดรวมที่แสดง</span>
-              <div className="text-sm font-bold tabular-nums" style={{ color: "#a78bfa" }}>
+              <span className="text-xs" style={{ color: "#B4A99E" }}>ยอดรวมที่แสดง</span>
+              <div className="text-sm font-bold tabular-nums" style={{ color: "#059669" }}>
                 {totalValue.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿
               </div>
             </div>
