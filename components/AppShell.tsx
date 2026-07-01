@@ -54,7 +54,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* ── Sidebar ─────────────────────────────────── */}
       <aside style={{
         width: 220, flexShrink: 0, display: "flex", flexDirection: "column",
-        background: "white", borderRight: "1px solid rgba(0,0,0,0.07)",
+        background: "#E8E4DF", borderRight: "1px solid rgba(0,0,0,0.08)",
         overflow: "hidden",
       }}>
         {/* Logo */}
