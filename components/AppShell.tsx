@@ -4,96 +4,116 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   LayoutDashboard, FileText, Hammer, ShoppingCart, ShoppingBasket,
-  Wrench, HardHat, Settings, ChevronRight, Bell, LogOut, Package, ArrowLeft,
+  Wrench, HardHat, Settings, ChevronRight, LogOut, Package, ArrowLeft,
 } from "lucide-react";
 
 const NAV = [
-  { href: "/",            label: "Dashboard",         icon: LayoutDashboard, group: null },
-  { href: "/po",          label: "ใบสั่งซื้อ (PO)",   icon: FileText,        group: "จัดซื้อ" },
-  { href: "/jo",          label: "ใบสั่งจ้าง (JO)",   icon: Hammer,          group: "จัดซื้อ" },
-  { href: "/orders",      label: "สั่งซื้อรายเดือน",  icon: ShoppingCart,    group: "จัดซื้อ" },
-  { href: "/suppliers",   label: "ผู้จำหน่าย",         icon: Package,         group: "จัดซื้อ" },
-  { href: "/food",        label: "ระบบวัตถุดิบ",       icon: ShoppingBasket,  group: "ห้องครัว" },
-  { href: "/maintenance", label: "ระบบแจ้งซ่อม",      icon: Wrench,          group: "ซ่อมบำรุง" },
-  { href: "/chang",       label: "ระบบช่าง",           icon: HardHat,         group: "ซ่อมบำรุง" },
-  { href: "/settings",    label: "ตั้งค่า",            icon: Settings,        group: null },
+  { href: "/",            label: "Dashboard",        icon: LayoutDashboard },
+  { href: "/po",          label: "ใบสั่งซื้อ (PO)",  icon: FileText,       group: "จัดซื้อ" },
+  { href: "/jo",          label: "ใบสั่งจ้าง (JO)",  icon: Hammer,         group: "จัดซื้อ" },
+  { href: "/orders",      label: "สั่งซื้อรายเดือน", icon: ShoppingCart,   group: "จัดซื้อ" },
+  { href: "/suppliers",   label: "ผู้จำหน่าย",        icon: Package,        group: "จัดซื้อ" },
+  { href: "/food",        label: "วัตถุดิบ",           icon: ShoppingBasket, group: "ห้องครัว" },
+  { href: "/maintenance", label: "แจ้งซ่อม",          icon: Wrench,         group: "ซ่อมบำรุง" },
+  { href: "/chang",       label: "ระบบช่าง",          icon: HardHat,        group: "ซ่อมบำรุง" },
+  { href: "/settings",    label: "ตั้งค่า",           icon: Settings },
 ];
 
-const GROUP_ORDER = [null, "จัดซื้อ", "ห้องครัว", "ซ่อมบำรุง"];
+const GROUPS = ["จัดซื้อ", "ห้องครัว", "ซ่อมบำรุง"];
 
-function groupNav() {
-  const result: { group: string | null; items: typeof NAV }[] = [];
-  for (const g of GROUP_ORDER) {
-    const items = NAV.filter((n) => n.group === g);
-    if (items.length) result.push({ group: g, items });
-  }
-  return result;
-}
+const BREADCRUMB_MAP: Record<string, string> = {
+  "/": "Dashboard", "/po": "ใบสั่งซื้อ (PO)", "/jo": "ใบสั่งจ้าง (JO)",
+  "/orders": "สั่งซื้อรายเดือน", "/food": "วัตถุดิบ", "/maintenance": "แจ้งซ่อม",
+  "/chang": "ระบบช่าง", "/suppliers": "ผู้จำหน่าย", "/items": "สินค้า",
+  "/settings": "ตั้งค่า", "/approvals": "อนุมัติ",
+};
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
-
   const router = useRouter();
+  const { data: session } = useSession();
 
   if (pathname === "/login") return <>{children}</>;
 
   const segments = pathname.split("/").filter(Boolean);
-  const isSubPage = segments.length >= 2; // e.g. /po/PO-001, /food/new
+  const isSubPage = segments.length >= 2;
+  const topSection = "/" + (segments[0] ?? "");
 
-  const userName = (session?.user as { userName?: string; approverName?: string })?.approverName
+  const rawName = (session?.user as { userName?: string; approverName?: string })?.approverName
     ?? (session?.user as { userName?: string })?.userName
     ?? session?.user?.name ?? "";
-  const displayName = userName.split(" ")[0];
+  const displayName = rawName.split(" ")[0] || "User";
 
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const isActive = (href: string) => href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  const ungrouped = NAV.filter((n) => !n.group);
+  const grouped = GROUPS.map((g) => ({ group: g, items: NAV.filter((n) => n.group === g) }));
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "#EDEAE6" }}>
-      {/* ── Sidebar ─────────────────────────────────── */}
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+
+      {/* ── Dark Sidebar ─────────────────────────────── */}
       <aside style={{
-        width: 220, flexShrink: 0, display: "flex", flexDirection: "column",
-        background: "#E8E4DF", borderRight: "1px solid rgba(0,0,0,0.08)",
-        overflow: "hidden",
+        width: 224, flexShrink: 0, display: "flex", flexDirection: "column",
+        background: "#0D1F14", overflow: "hidden",
       }}>
         {/* Logo */}
-        <div style={{ padding: "20px 18px 16px", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 9 }}>
+        <div style={{ padding: "22px 18px 18px" }}>
+          <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
-              width: 32, height: 32, borderRadius: 10,
-              background: "linear-gradient(135deg,#059669,#34d399)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0,
+              width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+              background: "linear-gradient(135deg,#34d399,#059669)",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17,
             }}>🌱</div>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#1C1815", letterSpacing: "-0.01em", lineHeight: 1.2 }}>ต้นกล้า</div>
-              <div style={{ fontSize: 9.5, color: "#9C9289", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>Tonkla School</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "white", letterSpacing: "-0.02em" }}>ต้นกล้า</div>
+              <div style={{ fontSize: 9, color: "rgba(52,211,153,0.5)", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" }}>TONKLA SCHOOL</div>
             </div>
           </Link>
         </div>
 
+        {/* Divider */}
+        <div style={{ height: 1, background: "rgba(255,255,255,0.06)", margin: "0 14px" }} />
+
         {/* Nav */}
-        <nav style={{ flex: 1, overflowY: "auto", padding: "12px 10px" }}>
-          {groupNav().map(({ group, items }) => (
-            <div key={group ?? "_top"} style={{ marginBottom: 20 }}>
-              {group && (
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#C4B9AD", padding: "0 8px", marginBottom: 4 }}>
-                  {group}
-                </div>
-              )}
+        <nav style={{ flex: 1, overflowY: "auto", padding: "14px 10px", scrollbarWidth: "none" }}>
+          {/* Ungrouped top items */}
+          {ungrouped.map(({ href, label, icon: Icon }) => {
+            const active = isActive(href);
+            return (
+              <Link key={href} href={href} style={{
+                display: "flex", alignItems: "center", gap: 9,
+                padding: "8px 10px", borderRadius: 10, marginBottom: 2,
+                textDecoration: "none", transition: "all 0.15s",
+                background: active ? "rgba(52,211,153,0.15)" : "transparent",
+                borderLeft: active ? "2px solid #34d399" : "2px solid transparent",
+                color: active ? "#34d399" : "rgba(255,255,255,0.5)",
+              }}>
+                <Icon size={15} strokeWidth={active ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: active ? 700 : 400 }}>{label}</span>
+              </Link>
+            );
+          })}
+
+          {/* Grouped items */}
+          {grouped.map(({ group, items }) => (
+            <div key={group} style={{ marginTop: 22 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.2)", padding: "0 10px", marginBottom: 6 }}>
+                {group}
+              </div>
               {items.map(({ href, label, icon: Icon }) => {
                 const active = isActive(href);
                 return (
                   <Link key={href} href={href} style={{
                     display: "flex", alignItems: "center", gap: 9,
-                    padding: "8px 10px", borderRadius: 10, marginBottom: 1,
+                    padding: "8px 10px", borderRadius: 10, marginBottom: 2,
                     textDecoration: "none", transition: "all 0.15s",
-                    background: active ? "#F0FDF4" : "transparent",
-                    color: active ? "#059669" : "#5C5450",
+                    background: active ? "rgba(52,211,153,0.15)" : "transparent",
+                    borderLeft: active ? "2px solid #34d399" : "2px solid transparent",
+                    color: active ? "#34d399" : "rgba(255,255,255,0.5)",
                   }}>
                     <Icon size={15} strokeWidth={active ? 2.2 : 1.8} style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, fontWeight: active ? 700 : 500, flex: 1 }}>{label}</span>
-                    {active && <ChevronRight size={12} style={{ color: "#059669", opacity: 0.6 }} />}
+                    <span style={{ fontSize: 13, fontWeight: active ? 700 : 400 }}>{label}</span>
                   </Link>
                 );
               })}
@@ -101,116 +121,78 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        {/* User footer */}
-        <div style={{ padding: "12px 10px", borderTop: "1px solid rgba(0,0,0,0.05)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 10 }}>
+        {/* User */}
+        <div style={{ padding: "10px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "10px", borderRadius: 12, background: "rgba(255,255,255,0.05)" }}>
             {session?.user?.image ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={session.user.image} alt="" style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />
+              <img src={session.user.image} alt="" style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "cover", flexShrink: 0, border: "1.5px solid rgba(52,211,153,0.4)" }} />
             ) : (
-              <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#D6CFC8,#BEB5AD)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#7A736D" }}>{displayName?.[0]?.toUpperCase() ?? "?"}</span>
+              <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#1a3a22,#2d5c38)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, border: "1.5px solid rgba(52,211,153,0.3)" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#34d399" }}>{displayName[0]?.toUpperCase()}</span>
               </div>
             )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#1C1815", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName || "User"}</div>
-              <div style={{ fontSize: 10, color: "#B4A99E", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{session?.user?.email}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "white", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</div>
+              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{session?.user?.email}</div>
             </div>
-            <Link href="/api/auth/signout" style={{ color: "#C4B9AD", flexShrink: 0 }}>
+            <Link href="/api/auth/signout" style={{ color: "rgba(255,255,255,0.25)", flexShrink: 0, display: "flex" }}>
               <LogOut size={13} />
             </Link>
           </div>
         </div>
       </aside>
 
-      {/* ── Main ────────────────────────────────────── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* ── Main content ─────────────────────────────── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "#F0EDE9" }}>
+
         {/* Top bar */}
         <header style={{
-          height: 52, flexShrink: 0, display: "flex", alignItems: "center",
+          height: 50, flexShrink: 0, display: "flex", alignItems: "center",
           justifyContent: "space-between", padding: "0 28px",
-          background: "rgba(237,234,230,0.8)", backdropFilter: "blur(8px)",
-          borderBottom: "1px solid rgba(0,0,0,0.06)",
+          background: "rgba(240,237,233,0.9)", backdropFilter: "blur(12px)",
+          borderBottom: "1px solid rgba(0,0,0,0.07)",
         }}>
-          {/* Back button + Breadcrumb */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {isSubPage && (
-              <button
-                onClick={() => router.back()}
-                style={{
-                  display: "flex", alignItems: "center", gap: 5,
-                  padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)",
-                  background: "white", color: "#5C5450", fontSize: 12, fontWeight: 600,
-                  cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#F0FDF4"; (e.currentTarget as HTMLButtonElement).style.color = "#059669"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#BBF7D0"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "white"; (e.currentTarget as HTMLButtonElement).style.color = "#5C5450"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(0,0,0,0.08)"; }}
-              >
-                <ArrowLeft size={13} /> ย้อนกลับ
+              <button onClick={() => router.back()} style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "5px 11px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.1)",
+                background: "white", color: "#5C5450", fontSize: 12, fontWeight: 600,
+                cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+              }}>
+                <ArrowLeft size={12} /> ย้อนกลับ
               </button>
             )}
-            <Breadcrumb pathname={pathname} />
+            {/* Breadcrumb */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {pathname !== "/" && (
+                <>
+                  <Link href="/" style={{ fontSize: 12, color: "#A09690", textDecoration: "none" }}>หน้าหลัก</Link>
+                  <ChevronRight size={11} style={{ color: "#C8C0B8" }} />
+                </>
+              )}
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#1C1815" }}>
+                {BREADCRUMB_MAP[topSection] ?? segments[0] ?? "Dashboard"}
+              </span>
+              {segments.length > 1 && (
+                <>
+                  <ChevronRight size={11} style={{ color: "#C8C0B8" }} />
+                  <span style={{ fontSize: 12, color: "#A09690", fontFamily: "monospace" }}>
+                    {segments[1] === "new" ? "สร้างใหม่" : decodeURIComponent(segments[1]).replace(/~/g, "/")}
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-
-          {/* Right */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <Bell size={16} style={{ color: "#9C9289" }} />
-            <div style={{ width: 1, height: 16, background: "rgba(0,0,0,0.1)" }} />
-            <span style={{ fontSize: 12, color: "#7A736D", fontWeight: 500 }}>{displayName}</span>
-          </div>
+          <span style={{ fontSize: 12, color: "#9C9289", fontWeight: 500 }}>{displayName}</span>
         </header>
 
-        {/* Page content */}
+        {/* Page */}
         <main style={{ flex: 1, overflowY: "auto" }}>
           {children}
         </main>
       </div>
-    </div>
-  );
-}
-
-const BREADCRUMB_MAP: Record<string, string> = {
-  "/": "Dashboard",
-  "/po": "ใบสั่งซื้อ (PO)",
-  "/jo": "ใบสั่งจ้าง (JO)",
-  "/orders": "สั่งซื้อรายเดือน",
-  "/food": "ระบบวัตถุดิบ",
-  "/maintenance": "ระบบแจ้งซ่อม",
-  "/chang": "ระบบช่าง",
-  "/suppliers": "ผู้จำหน่าย",
-  "/items": "รายการสินค้า",
-  "/settings": "ตั้งค่า",
-  "/approvals": "อนุมัติ",
-};
-
-function Breadcrumb({ pathname }: { pathname: string }) {
-  const segments = pathname.split("/").filter(Boolean);
-  const topSection = "/" + (segments[0] ?? "");
-  const sectionLabel = BREADCRUMB_MAP[topSection] ?? segments[0];
-
-  if (pathname === "/") {
-    return <span style={{ fontSize: 13, fontWeight: 600, color: "#5C5450" }}>Dashboard</span>;
-  }
-
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <Link href="/" style={{ fontSize: 12, color: "#9C9289", textDecoration: "none", fontWeight: 500 }}>หน้าหลัก</Link>
-      <ChevronRight size={12} style={{ color: "#C4B9AD" }} />
-      <span style={{ fontSize: 13, fontWeight: 600, color: "#1C1815" }}>{sectionLabel}</span>
-      {segments.length > 1 && segments[1] !== "new" && (
-        <>
-          <ChevronRight size={12} style={{ color: "#C4B9AD" }} />
-          <span style={{ fontSize: 12, color: "#9C9289", fontFamily: "monospace" }}>
-            {segments[1] === "new" ? "สร้างใหม่" : decodeURIComponent(segments[1]).replace(/~/g, "/")}
-          </span>
-        </>
-      )}
-      {segments.length > 1 && segments[1] === "new" && (
-        <>
-          <ChevronRight size={12} style={{ color: "#C4B9AD" }} />
-          <span style={{ fontSize: 12, color: "#9C9289" }}>สร้างใหม่</span>
-        </>
-      )}
     </div>
   );
 }
