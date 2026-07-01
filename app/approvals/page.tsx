@@ -22,16 +22,16 @@ function fmt(val: string) {
 
 function ApprovalSkeleton() {
   return (
-    <div className="bg-white rounded-2xl p-5 space-y-4" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" }}>
-      <div className="flex items-center gap-2">
+    <div style={{ background: "white", borderRadius: 24, padding: 20, border: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
         <SkeletonBox className="h-5 w-12 rounded-full" />
         <SkeletonBox className="h-5 w-28" />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         <SkeletonBox className="h-14 rounded-xl" />
         <SkeletonBox className="h-14 rounded-xl" />
       </div>
-      <div className="flex gap-3">
+      <div style={{ display: "flex", gap: 12 }}>
         <SkeletonBox className="h-11 flex-1 rounded-xl" />
         <SkeletonBox className="h-11 w-28 rounded-xl" />
       </div>
@@ -97,149 +97,151 @@ export default function ApprovalsPage() {
     }
   }
 
-  const cardStyle = { boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" };
-
   return (
-    <main className="max-w-2xl mx-auto px-6 py-10">
+    <div style={{ minHeight: "100%", background: "#F0EDE9" }}>
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg,#FEF3C7,#FDE68A)" }}>
-            <Clock size={17} style={{ color: "#D97706" }} />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900" style={{ fontFamily: "var(--font-display)" }}>
-            รออนุมัติ
-          </h1>
-        </div>
-        <p className="text-sm text-slate-400 ml-12">
-          {user?.role === "admin"
-            ? "แสดงทุกรายการที่รออนุมัติในระบบ"
-            : user?.approverName
-              ? `รายการที่ส่งมาให้ ${user.approverName} พิจารณา`
-              : "รายการที่รออนุมัติ"
-          }
+      <div style={{ padding: "44px 44px 0" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#D97706", marginBottom: 8 }}>
+          อนุมัติ
         </p>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16 }}>
+          <div>
+            <h1 style={{ fontSize: "clamp(2.8rem,5vw,4rem)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 0.95, color: "#111110", margin: 0 }}>
+              รออนุมัติ
+            </h1>
+            {!loading && (
+              <p style={{ fontSize: 13, color: "#A8A29E", marginTop: 10 }}>
+                {user?.role === "admin"
+                  ? "แสดงทุกรายการที่รออนุมัติในระบบ"
+                  : user?.approverName
+                    ? `รายการที่ส่งมาให้ ${user.approverName} พิจารณา`
+                    : "รายการที่รออนุมัติ"
+                }
+              </p>
+            )}
+          </div>
+          {!loading && items.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: "clamp(1.8rem,3vw,2.6rem)", fontWeight: 900, color: "#D97706", lineHeight: 1 }}>{items.length}</span>
+              <span style={{ fontSize: 13, color: "#A8A29E" }}>รายการ</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {loading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, i) => <ApprovalSkeleton key={i} />)}
-        </div>
-      ) : items.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center" style={{ background: "linear-gradient(135deg,#F0FDF4,#DCFCE7)" }}>
-            <CheckCircle2 size={30} style={{ color: "#16A34A" }} />
+      {/* Content */}
+      <div style={{ padding: "28px 44px 48px" }}>
+        {loading ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {Array.from({ length: 3 }).map((_, i) => <ApprovalSkeleton key={i} />)}
           </div>
-          <p className="font-semibold text-slate-700 mb-1">ไม่มีรายการค้างอนุมัติ</p>
-          <p className="text-sm text-slate-400">ทุกรายการได้รับการพิจารณาแล้ว</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Count badge */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-500">{items.length} รายการ</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+        ) : items.length === 0 ? (
+          <div style={{
+            background: "white", borderRadius: 24, border: "1px solid rgba(0,0,0,0.06)",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.04)", padding: "64px 20px", textAlign: "center",
+          }}>
+            <div style={{ width: 64, height: 64, borderRadius: 20, background: "linear-gradient(135deg,#F0FDF4,#DCFCE7)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+              <CheckCircle2 size={30} style={{ color: "#16A34A" }} />
+            </div>
+            <p style={{ fontWeight: 700, color: "#1C1917", fontSize: 15, marginBottom: 6 }}>ไม่มีรายการค้างอนุมัติ</p>
+            <p style={{ fontSize: 13, color: "#A8A29E" }}>ทุกรายการได้รับการพิจารณาแล้ว</p>
           </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {items.map((item) => {
+              const itemId = item.kind === "PO" ? item.data.poNumber : item.data.joNumber;
+              const supplier = item.data.supplierName;
+              const requester = item.data.requester;
+              const total = item.data.grandTotal;
+              const date = item.kind === "PO" ? item.data.orderDate : item.data.startDate;
+              const detailUrl = item.kind === "PO"
+                ? `/po/${itemId.replace(/\//g, "~")}`
+                : `/jo/${itemId.replace(/\//g, "~")}`;
+              const isPO = item.kind === "PO";
+              const isActioning = actioning === itemId;
 
-          {items.map((item) => {
-            const itemId = item.kind === "PO" ? item.data.poNumber : item.data.joNumber;
-            const supplier = item.data.supplierName;
-            const requester = item.data.requester;
-            const total = item.data.grandTotal;
-            const date = item.kind === "PO" ? item.data.orderDate : item.data.startDate;
-            const detailUrl = item.kind === "PO"
-              ? `/po/${itemId.replace(/\//g, "~")}`
-              : `/jo/${itemId.replace(/\//g, "~")}`;
-            const isPO = item.kind === "PO";
-            const isActioning = actioning === itemId;
+              return (
+                <div key={itemId} style={{ background: "white", borderRadius: 24, overflow: "hidden", border: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 2px 12px rgba(0,0,0,0.04)" }}>
+                  {/* Top accent stripe */}
+                  <div style={{ height: 4, background: isPO ? "linear-gradient(90deg,#10b981,#059669)" : "linear-gradient(90deg,#a78bfa,#7c3aed)" }} />
 
-            return (
-              <div key={itemId} className="bg-white rounded-2xl overflow-hidden" style={cardStyle}>
-                {/* Top accent */}
-                <div className="h-1" style={{ background: isPO ? "linear-gradient(90deg,#10b981,#059669)" : "linear-gradient(90deg,#a78bfa,#7c3aed)" }} />
-
-                <div className="p-5">
-                  {/* Title row */}
-                  <div className="flex items-start justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-                        style={{ background: isPO ? "#ECFDF5" : "#F5F3FF" }}>
-                        {isPO
-                          ? <FileText size={15} style={{ color: "#059669" }} />
-                          : <Hammer size={15} style={{ color: "#7C3AED" }} />
-                        }
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider"
-                            style={{ color: isPO ? "#059669" : "#7C3AED" }}>
+                  <div style={{ padding: 20 }}>
+                    {/* Title row */}
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: isPO ? "#ECFDF5" : "#F5F3FF" }}>
+                          {isPO
+                            ? <FileText size={15} style={{ color: "#059669" }} />
+                            : <Hammer size={15} style={{ color: "#7C3AED" }} />
+                          }
+                        </div>
+                        <div>
+                          <span style={{ display: "inline-flex", alignItems: "center", fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20, marginBottom: 4, color: isPO ? "#059669" : "#7C3AED", background: isPO ? "#ECFDF5" : "#F5F3FF" }}>
                             {isPO ? "ใบสั่งซื้อ" : "ใบจ้างงาน"}
                           </span>
+                          <p style={{ fontWeight: 800, color: "#111110", fontSize: 14, margin: 0, lineHeight: 1.2 }}>{itemId}</p>
                         </div>
-                        <p className="font-bold text-slate-900 text-sm leading-tight">{itemId}</p>
                       </div>
+                      <Link href={detailUrl}
+                        style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#A8A29E", textDecoration: "none", flexShrink: 0, marginTop: 4 }}>
+                        ดูรายละเอียด <ChevronRight size={12} />
+                      </Link>
                     </div>
-                    <Link href={detailUrl}
-                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors shrink-0 mt-1">
-                      ดูรายละเอียด <ChevronRight size={12} />
-                    </Link>
-                  </div>
 
-                  {/* Info grid */}
-                  <div className="grid grid-cols-2 gap-3 mb-5">
-                    <div className="rounded-xl p-3" style={{ background: "#F8FAFC" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">ร้านค้า / ผู้รับจ้าง</p>
-                      <p className="text-sm font-semibold text-slate-800 truncate">{supplier || "—"}</p>
+                    {/* Info grid */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+                      {[
+                        { label: "ร้านค้า / ผู้รับจ้าง", value: supplier || "—", accent: false },
+                        { label: "ผู้ขออนุมัติ", value: requester || "—", accent: false },
+                        { label: "วันที่", value: date || "—", accent: false },
+                        { label: "ยอดรวม", value: fmt(total), accent: true },
+                      ].map(({ label, value, accent }) => (
+                        <div key={label} style={{ borderRadius: 14, padding: 12, background: accent ? (isPO ? "#ECFDF5" : "#F5F3FF") : "#F8FAFC" }}>
+                          <p style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: accent ? (isPO ? "#059669" : "#7C3AED") : "#A8A29E", marginBottom: 4 }}>{label}</p>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: accent ? (isPO ? "#059669" : "#7C3AED") : "#1C1917", margin: 0, fontVariantNumeric: "tabular-nums" }}>{value}</p>
+                        </div>
+                      ))}
                     </div>
-                    <div className="rounded-xl p-3" style={{ background: "#F8FAFC" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">ผู้ขออนุมัติ</p>
-                      <p className="text-sm font-semibold text-slate-800">{requester || "—"}</p>
-                    </div>
-                    <div className="rounded-xl p-3" style={{ background: "#F8FAFC" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">วันที่</p>
-                      <p className="text-sm font-semibold text-slate-800">{date || "—"}</p>
-                    </div>
-                    <div className="rounded-xl p-3" style={{ background: isPO ? "#ECFDF5" : "#F5F3FF" }}>
-                      <p className="text-[10px] font-semibold uppercase tracking-wide mb-1"
-                        style={{ color: isPO ? "#059669" : "#7C3AED" }}>ยอดรวม</p>
-                      <p className="text-sm font-bold tabular-nums"
-                        style={{ color: isPO ? "#059669" : "#7C3AED" }}>{fmt(total)}</p>
-                    </div>
-                  </div>
 
-                  {/* Action buttons */}
-                  <div className="flex gap-2.5">
-                    <button
-                      disabled={isActioning}
-                      onClick={() => handleAction(item, "approve")}
-                      className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-60 hover:-translate-y-0.5"
-                      style={{
-                        background: "linear-gradient(135deg,#10b981,#059669)",
-                        boxShadow: "0 4px 14px rgba(16,185,129,0.3)",
-                      }}
-                    >
-                      {isActioning
-                        ? <Loader2 size={15} className="animate-spin" />
-                        : <CheckCircle2 size={15} />
-                      }
-                      อนุมัติรายการนี้
-                    </button>
-                    <button
-                      disabled={isActioning}
-                      onClick={() => handleAction(item, "reject")}
-                      className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-60"
-                      style={{ background: "#FEF2F2", border: "1px solid #FECACA", color: "#DC2626" }}
-                    >
-                      <XCircle size={15} />
-                      ไม่อนุมัติ
-                    </button>
+                    {/* Action buttons */}
+                    <div style={{ display: "flex", gap: 10 }}>
+                      <button
+                        disabled={isActioning}
+                        onClick={() => handleAction(item, "approve")}
+                        style={{
+                          flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                          padding: "12px 0", borderRadius: 14, fontWeight: 700, fontSize: 13, color: "white",
+                          border: "none", cursor: isActioning ? "not-allowed" : "pointer", opacity: isActioning ? 0.6 : 1,
+                          background: "linear-gradient(135deg,#10b981,#059669)",
+                          boxShadow: "0 4px 14px rgba(16,185,129,0.3)",
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        {isActioning ? <Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> : <CheckCircle2 size={15} />}
+                        อนุมัติรายการนี้
+                      </button>
+                      <button
+                        disabled={isActioning}
+                        onClick={() => handleAction(item, "reject")}
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                          padding: "12px 20px", borderRadius: 14, fontWeight: 700, fontSize: 13,
+                          border: "1px solid #FECACA", background: "#FEF2F2", color: "#DC2626",
+                          cursor: isActioning ? "not-allowed" : "pointer", opacity: isActioning ? 0.6 : 1,
+                          transition: "all 0.15s",
+                        }}
+                      >
+                        <XCircle size={15} />
+                        ไม่อนุมัติ
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </main>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

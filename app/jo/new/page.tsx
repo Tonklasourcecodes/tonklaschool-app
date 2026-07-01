@@ -3,11 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2 } from "lucide-react";
 import DatePicker from "@/components/DatePicker";
 import { Combobox } from "@/components/Combobox";
 import { useToast } from "@/components/Toaster";
 import type { NewJOInput, NewJOOrderItem } from "@/lib/types-po";
+
+const ACCENT = "#7C3AED";
+const ACCENT_SHADOW = "rgba(124,58,237,0.25)";
 
 function thaiDateToISO(thaiDate: string): string {
   const parts = thaiDate.trim().split("/");
@@ -17,30 +20,74 @@ function thaiDateToISO(thaiDate: string): string {
   return `${ceYear}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
 }
 
-const inputCls =
-  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 placeholder:text-slate-300";
-const numCls =
-  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 tabular-nums text-right";
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "11px 14px",
+  borderRadius: 12,
+  border: "1.5px solid rgba(0,0,0,0.08)",
+  fontSize: 14,
+  background: "white",
+  outline: "none",
+  color: "#1C1815",
+};
 
-function Field({
-  label,
-  required,
-  children,
-  span2,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-  span2?: boolean;
-}) {
+function focusStyle(focused: boolean): React.CSSProperties {
+  return focused
+    ? { borderColor: ACCENT, boxShadow: "0 0 0 3px rgba(124,58,237,0.1)" }
+    : {};
+}
+
+function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
-    <div className={span2 ? "sm:col-span-2" : ""}>
-      <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
-        {label}
-        {required && <span className="text-red-400 ml-0.5">*</span>}
-      </label>
+    <span style={{ fontSize: 12, fontWeight: 700, color: "#5C5450", marginBottom: 6, display: "block" }}>
+      {children}{required && <span style={{ color: "#EF4444", marginLeft: 2 }}>*</span>}
+    </span>
+  );
+}
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "#C4B9AD", marginBottom: 16 }}>
       {children}
     </div>
+  );
+}
+
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      background: "white",
+      borderRadius: 24,
+      border: "1px solid rgba(0,0,0,0.06)",
+      padding: 32,
+      boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function FocusInput({ style, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <input
+      {...props}
+      style={{ ...inputStyle, ...style, ...focusStyle(focused) }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
+  );
+}
+
+function FocusTextarea({ style, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <textarea
+      {...props}
+      style={{ ...inputStyle, ...style, resize: "vertical", ...focusStyle(focused) }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
   );
 }
 
@@ -165,117 +212,145 @@ export default function NewJOPage() {
     }
   }
 
-  const cardStyle = { boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" };
-
   return (
-    <main className="max-w-5xl mx-auto px-6 py-10">
-      <div className="mb-7">
-        <Link href="/jo" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 mb-3 transition-colors">
-          <ArrowLeft size={15} /> กลับรายการ JO
-        </Link>
-        <h1 className="text-2xl font-bold text-slate-900">สร้างใบจ้างงานใหม่</h1>
-        <p className="text-sm text-slate-400 mt-1">เลขที่ JO จะถูกสร้างอัตโนมัติ</p>
+    <main style={{ background: "#F0EDE9", minHeight: "100vh" }}>
+      {/* Page Header */}
+      <div style={{ padding: "44px 44px 32px" }}>
+        <div style={{ fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 900, letterSpacing: "-0.04em", color: "#1C1815", lineHeight: 1 }}>
+          สร้างใบสั่งจ้าง
+        </div>
+        <div style={{ fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 900, letterSpacing: "-0.04em", color: "#C4B9AD", lineHeight: 1 }}>
+          JO ใหม่
+        </div>
       </div>
 
+      <form ref={formRef} onSubmit={handleSubmit} style={{ padding: "0 44px 48px", display: "flex", flexDirection: "column", gap: 20 }}>
 
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
+        {/* ข้อมูลการจ้างงาน */}
+        <Card>
+          <SectionHeader>ข้อมูลการจ้างงาน</SectionHeader>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20 }}>
 
-        {/* ── ข้อมูลการจ้างงาน ─── */}
-        <section className="bg-white rounded-2xl p-6 grid sm:grid-cols-2 gap-5" style={cardStyle}>
-          <div className="sm:col-span-2 flex items-center gap-2 pb-1">
-            <h2 className="text-sm font-bold text-slate-700">ข้อมูลการจ้างงาน</h2>
-            <div className="h-px flex-1 bg-slate-100" />
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Label required>ชื่อร้านค้า / บุคคล / บริษัท</Label>
+              <FocusInput
+                required
+                value={form.supplierName}
+                onChange={(e) => set("supplierName", e.target.value)}
+                placeholder="ชื่อผู้รับจ้าง"
+              />
+            </div>
+
+            <div>
+              <Label required>ชื่อผู้จ้าง</Label>
+              <Combobox options={people} value={form.requester} onChange={(v) => set("requester", v)} placeholder="เลือกหรือพิมพ์ชื่อ" required />
+            </div>
+
+            <div>
+              <Label>ผู้ตรวจสอบ</Label>
+              <Combobox options={people} value={form.reviewer} onChange={(v) => set("reviewer", v)} placeholder="เลือกหรือพิมพ์ชื่อ" />
+            </div>
+
+            <div>
+              <Label required>ผู้อนุมัติ</Label>
+              <Combobox options={people} value={form.approver} onChange={(v) => set("approver", v)} placeholder="เลือกหรือพิมพ์ชื่อ" required />
+            </div>
+
+            <div>
+              <Label>แผนก</Label>
+              <FocusInput
+                value={form.department}
+                onChange={(e) => set("department", e.target.value)}
+                placeholder="แผนก/ฝ่าย"
+              />
+            </div>
+
           </div>
+        </Card>
 
-          <Field label="ชื่อร้านค้า / บุคคล / บริษัท" required span2>
-            <input
-              required
-              className={inputCls}
-              value={form.supplierName}
-              onChange={(e) => set("supplierName", e.target.value)}
-              placeholder="ชื่อผู้รับจ้าง"
-            />
-          </Field>
+        {/* รายละเอียดงาน */}
+        <Card>
+          <SectionHeader>รายละเอียดงาน</SectionHeader>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20 }}>
 
-          <Field label="ชื่อผู้จ้าง" required>
-            <Combobox options={people} value={form.requester} onChange={(v) => set("requester", v)} placeholder="เลือกหรือพิมพ์ชื่อ" required />
-          </Field>
+            <div>
+              <Label>วันที่เริ่มงาน</Label>
+              <DatePicker value={form.startDate} onChange={(v) => set("startDate", v)} />
+            </div>
 
-          <Field label="ผู้ตรวจสอบ">
-            <Combobox options={people} value={form.reviewer} onChange={(v) => set("reviewer", v)} placeholder="เลือกหรือพิมพ์ชื่อ" />
-          </Field>
+            <div>
+              <Label>วันที่สิ้นสุด</Label>
+              <DatePicker value={form.endDate} onChange={(v) => set("endDate", v)} />
+            </div>
 
-          <Field label="ผู้อนุมัติ" required>
-            <Combobox options={people} value={form.approver} onChange={(v) => set("approver", v)} placeholder="เลือกหรือพิมพ์ชื่อ" required />
-          </Field>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Label>สถานที่ทำงาน</Label>
+              <FocusInput
+                value={form.location}
+                onChange={(e) => set("location", e.target.value)}
+                placeholder="ตึก/ห้อง/พื้นที่"
+              />
+            </div>
 
-          <Field label="แผนก">
-            <input className={inputCls} value={form.department} onChange={(e) => set("department", e.target.value)} placeholder="แผนก/ฝ่าย" />
-          </Field>
-        </section>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Label>หมายเหตุ</Label>
+              <FocusInput
+                value={form.notes}
+                onChange={(e) => set("notes", e.target.value)}
+                placeholder="รายละเอียดเพิ่มเติม..."
+              />
+            </div>
 
-        {/* ── รายละเอียดงาน ─── */}
-        <section className="bg-white rounded-2xl p-6 grid sm:grid-cols-2 gap-5" style={cardStyle}>
-          <div className="sm:col-span-2 flex items-center gap-2 pb-1">
-            <h2 className="text-sm font-bold text-slate-700">รายละเอียดงาน</h2>
-            <div className="h-px flex-1 bg-slate-100" />
           </div>
+        </Card>
 
-          <Field label="วันที่เริ่มงาน">
-            <DatePicker value={form.startDate} onChange={(v) => set("startDate", v)} />
-          </Field>
-
-          <Field label="วันที่สิ้นสุด">
-            <DatePicker value={form.endDate} onChange={(v) => set("endDate", v)} />
-          </Field>
-
-          <Field label="สถานที่ทำงาน" span2>
-            <input className={inputCls} value={form.location} onChange={(e) => set("location", e.target.value)} placeholder="ตึก/ห้อง/พื้นที่" />
-          </Field>
-
-          <Field label="หมายเหตุ" span2>
-            <input className={inputCls} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="รายละเอียดเพิ่มเติม..." />
-          </Field>
-        </section>
-
-        {/* ── รายการจ้าง ─── */}
-        <section className="bg-white rounded-2xl p-6" style={cardStyle}>
-          <div className="flex items-center gap-2 mb-5">
-            <h2 className="text-sm font-bold text-slate-700">รายการจ้าง</h2>
-            {items.filter((it) => it.itemName.trim()).length > 0 && (
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                {items.filter((it) => it.itemName.trim()).length}
-              </span>
-            )}
-            <div className="h-px flex-1 bg-slate-100" />
+        {/* รายการจ้าง */}
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <SectionHeader>รายการจ้าง</SectionHeader>
+              {items.filter((it) => it.itemName.trim()).length > 0 && (
+                <span style={{
+                  fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 20,
+                  background: "rgba(124,58,237,0.1)", color: ACCENT, marginBottom: 16,
+                }}>
+                  {items.filter((it) => it.itemName.trim()).length}
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setItems((prev) => [...prev, emptyItem()])}
-              className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-semibold bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
+              style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "8px 14px",
+                borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                background: "rgba(124,58,237,0.08)", color: ACCENT, border: "none",
+              }}
             >
               <Plus size={13} /> เพิ่มรายการ
             </button>
           </div>
 
           <div style={{ overflowX: "auto" }}>
-            <table className="w-full text-sm" style={{ minWidth: "780px" }}>
+            <table style={{ width: "100%", minWidth: 780, fontSize: 14, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid #F1F5F9" }}>
+                <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
                   {[
-                    { h: "ชื่องาน / รายการ", req: true },
-                    { h: "จำนวน", req: false },
-                    { h: "หน่วย", req: false },
-                    { h: "ราคา/หน่วย (excl. VAT)", req: false },
-                    { h: "ยอดรวม (incl)", req: false },
-                    { h: "หมายเหตุ", req: false },
-                    { h: "", req: false },
-                  ].map(({ h, req }, i) => (
-                    <th
-                      key={i}
-                      className="font-semibold text-left pb-3 px-2 text-xs text-slate-400 uppercase tracking-wide first:pl-0 last:pr-0"
-                      style={{ width: ["34%","9%","11%","14%","14%","12%","3%"][i] }}
-                    >
-                      {h}{req && <span className="text-red-400 ml-0.5">*</span>}
+                    { label: "ชื่องาน / รายการ *", w: "34%" },
+                    { label: "จำนวน", w: "9%" },
+                    { label: "หน่วย", w: "11%" },
+                    { label: "ราคา/หน่วย (excl. VAT)", w: "14%" },
+                    { label: "ยอดรวม (incl)", w: "14%" },
+                    { label: "หมายเหตุ", w: "12%" },
+                    { label: "", w: "6%" },
+                  ].map((col, i) => (
+                    <th key={i} style={{
+                      width: col.w, textAlign: "left",
+                      paddingBottom: 10, paddingLeft: 6, paddingRight: 6,
+                      fontSize: 11, fontWeight: 800, textTransform: "uppercase",
+                      letterSpacing: "0.08em", color: "#C4B9AD",
+                    }}>
+                      {col.label}
                     </th>
                   ))}
                 </tr>
@@ -284,26 +359,25 @@ export default function NewJOPage() {
                 {items.map((item, idx) => {
                   const c = calcItem(item);
                   return (
-                    <tr key={idx} style={{ borderBottom: "1px solid #F8FAFC" }}>
-                      <td className="py-2 pr-2">
-                        <textarea
+                    <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.03)" }}>
+                      <td style={{ padding: "8px 6px 8px 0" }}>
+                        <FocusTextarea
                           required
                           rows={2}
-                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition-all focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 resize-none placeholder:text-slate-300"
                           value={item.itemName}
                           onChange={(e) => setItem(idx, "itemName", e.target.value)}
                           placeholder="รายละเอียดงานที่จ้าง..."
                         />
                       </td>
-                      <td className="py-2 px-2">
-                        <input
+                      <td style={{ padding: "8px 6px" }}>
+                        <FocusInput
                           type="number" min="0" step="any"
-                          className={numCls + " text-center"}
+                          style={{ textAlign: "center" }}
                           value={item.qty}
                           onChange={(e) => setItem(idx, "qty", e.target.value)}
                         />
                       </td>
-                      <td className="py-2 px-2">
+                      <td style={{ padding: "8px 6px" }}>
                         <Combobox
                           options={COMMON_UNITS}
                           value={item.unit}
@@ -311,34 +385,35 @@ export default function NewJOPage() {
                           placeholder="หน่วย"
                         />
                       </td>
-                      <td className="py-2 px-2">
-                        <input
+                      <td style={{ padding: "8px 6px" }}>
+                        <FocusInput
                           type="number" min="0" step="0.01"
-                          className={numCls}
+                          style={{ textAlign: "right" }}
                           value={item.priceExcl}
                           onChange={(e) => setItem(idx, "priceExcl", e.target.value)}
                           placeholder="0.00"
                         />
                       </td>
-                      <td className="py-2 px-2 text-right">
+                      <td style={{ padding: "8px 6px", textAlign: "right" }}>
                         {c.incl > 0
-                          ? <span className="font-semibold text-slate-800 tabular-nums">{fmt(c.incl)}</span>
-                          : <span className="text-slate-300">—</span>}
+                          ? <span style={{ fontWeight: 700, color: "#1C1815", fontVariantNumeric: "tabular-nums" }}>{fmt(c.incl)}</span>
+                          : <span style={{ color: "#C4B9AD" }}>—</span>}
                       </td>
-                      <td className="py-2 px-2">
-                        <input
-                          className={inputCls}
+                      <td style={{ padding: "8px 6px" }}>
+                        <FocusInput
                           value={item.itemNote ?? ""}
                           onChange={(e) => setItem(idx, "itemNote", e.target.value)}
                           placeholder="ถ้ามี"
                         />
                       </td>
-                      <td className="py-2 pl-2 text-center">
+                      <td style={{ padding: "8px 6px", textAlign: "center" }}>
                         {items.length > 1 && (
                           <button
                             type="button"
                             onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}
-                            className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "#C4B9AD", padding: 6, borderRadius: 8 }}
+                            onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; e.currentTarget.style.background = "#FEF2F2"; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = "#C4B9AD"; e.currentTarget.style.background = "none"; }}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -350,63 +425,68 @@ export default function NewJOPage() {
               </tbody>
             </table>
           </div>
-        </section>
+        </Card>
 
-        {/* ── สรุปยอด ─── */}
-        <section className="bg-white rounded-2xl p-6" style={cardStyle}>
-          <div className="flex items-center gap-2 mb-5">
-            <h2 className="text-sm font-bold text-slate-700">สรุปยอด</h2>
-            <div className="h-px flex-1 bg-slate-100" />
-          </div>
-          <div className="flex gap-8 flex-col sm:flex-row">
-            <div className="flex-1">
-              <Field label="ค่ามัดจำ (บาท)">
-                <input
-                  type="number" min="0" step="any"
-                  className={numCls}
-                  placeholder="0.00"
-                  value={form.deposit}
-                  onChange={(e) => set("deposit", e.target.value)}
-                  style={{ maxWidth: 200 }}
-                />
-              </Field>
+        {/* สรุปยอด */}
+        <Card>
+          <SectionHeader>สรุปยอด</SectionHeader>
+          <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
+            <div style={{ flex: 1 }}>
+              <Label>ค่ามัดจำ (บาท)</Label>
+              <FocusInput
+                type="number" min="0" step="any"
+                style={{ textAlign: "right", maxWidth: 200 }}
+                placeholder="0.00"
+                value={form.deposit}
+                onChange={(e) => set("deposit", e.target.value)}
+              />
             </div>
-
-            <div className="min-w-[240px] space-y-2.5 text-sm">
-              <div className="flex justify-between text-slate-500">
-                <span>ยอดก่อน VAT</span>
-                <span className="tabular-nums font-medium">{fmt(totals.excl)} ฿</span>
-              </div>
-              <div className="flex justify-between text-slate-500">
-                <span>VAT 7%</span>
-                <span className="tabular-nums font-medium">{fmt(totals.vat)} ฿</span>
-              </div>
-              <div className="flex justify-between font-bold text-slate-900 pt-2 border-t border-slate-100 text-base">
-                <span>รวมทั้งสิ้น</span>
-                <span className="tabular-nums text-emerald-700">{fmt(totals.incl)} ฿</span>
+            <div style={{ minWidth: 260 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#5C5450" }}>
+                  <span>ยอดก่อน VAT</span>
+                  <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(totals.excl)} ฿</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#5C5450" }}>
+                  <span>VAT 7%</span>
+                  <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(totals.vat)} ฿</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, color: "#1C1815", paddingTop: 12, borderTop: "2px solid rgba(0,0,0,0.06)", marginTop: 4 }}>
+                  <span>รวมทั้งสิ้น</span>
+                  <span style={{ color: ACCENT, fontVariantNumeric: "tabular-nums" }}>{fmt(totals.incl)} ฿</span>
+                </div>
               </div>
             </div>
           </div>
-        </section>
+        </Card>
 
-        {/* ── Actions ─── */}
-        <div className="flex justify-end gap-3 pb-6">
+        {/* Actions */}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, paddingTop: 4 }}>
           <Link
             href="/jo"
-            className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm text-slate-600 hover:bg-slate-50 transition-colors"
+            style={{
+              padding: "14px 28px", borderRadius: 16, fontWeight: 700, fontSize: 14,
+              background: "white", color: "#5C5450", border: "1.5px solid rgba(0,0,0,0.08)",
+              textDecoration: "none", display: "inline-block",
+            }}
           >
             ยกเลิก
           </Link>
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-all disabled:opacity-60 hover:-translate-y-0.5"
-            style={{ background: "linear-gradient(135deg,#10b981,#059669)", boxShadow: "0 4px 14px rgba(16,185,129,0.35)" }}
+            style={{
+              padding: "14px 32px", borderRadius: 16, fontWeight: 800, fontSize: 15,
+              background: saving ? "#C4B9AD" : ACCENT, color: "white",
+              border: "none", cursor: saving ? "not-allowed" : "pointer",
+              boxShadow: `0 4px 20px ${ACCENT_SHADOW}`,
+              display: "flex", alignItems: "center", gap: 8,
+            }}
           >
             {saving ? (
-              <><Loader2 size={14} className="animate-spin" /> กำลังบันทึก...</>
+              <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> กำลังบันทึก...</>
             ) : (
-              <>บันทึก JO <kbd className="text-[10px] font-mono bg-emerald-400/30 px-1.5 py-0.5 rounded">⌘↵</kbd></>
+              <>บันทึก JO <kbd style={{ fontSize: 10, fontFamily: "monospace", background: "rgba(255,255,255,0.2)", padding: "2px 6px", borderRadius: 6 }}>⌘↵</kbd></>
             )}
           </button>
         </div>

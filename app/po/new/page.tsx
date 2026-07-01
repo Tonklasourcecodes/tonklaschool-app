@@ -3,12 +3,15 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, ChevronDown, Loader2 } from "lucide-react";
+import { Plus, Trash2, ChevronDown, Loader2 } from "lucide-react";
 import type { Item, Supplier, NewPOLineItemInput } from "@/lib/types-po";
 
 import { Combobox } from "@/components/Combobox";
 import DatePicker from "@/components/DatePicker";
 import { useToast } from "@/components/Toaster";
+
+const ACCENT = "#059669";
+const ACCENT_SHADOW = "rgba(5,150,105,0.25)";
 
 const UNITS = [
   "ชิ้น", "อัน", "ตัว", "แพ็ค", "ถุง", "ขวด", "กล่อง", "ชุด",
@@ -17,30 +20,68 @@ const UNITS = [
   "แกลลอน", "มัด", "แผง", "ถาด",
 ];
 
-const numCls =
-  "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 text-right bg-white transition-all";
+const inputStyle = {
+  width: "100%",
+  padding: "11px 14px",
+  borderRadius: 12,
+  border: "1.5px solid rgba(0,0,0,0.08)",
+  fontSize: 14,
+  background: "white",
+  outline: "none",
+  color: "#1C1815",
+};
 
-const inputCls =
-  "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 bg-white transition-all";
+const numStyle = {
+  ...inputStyle,
+  textAlign: "right" as const,
+};
 
-function Field({
-  label,
-  required,
-  children,
-  span2,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-  span2?: boolean;
-}) {
+function focusStyle(focused: boolean) {
+  return focused
+    ? { borderColor: ACCENT, boxShadow: "0 0 0 3px rgba(5,150,105,0.1)" }
+    : {};
+}
+
+function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
-    <label className={`block ${span2 ? "sm:col-span-2" : ""}`}>
-      <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1.5">
-        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
-      </span>
+    <span style={{ fontSize: 12, fontWeight: 700, color: "#5C5450", marginBottom: 6, display: "block" }}>
+      {children}{required && <span style={{ color: "#EF4444", marginLeft: 2 }}>*</span>}
+    </span>
+  );
+}
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "#C4B9AD", marginBottom: 16 }}>
       {children}
-    </label>
+    </div>
+  );
+}
+
+function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{
+      background: "white",
+      borderRadius: 24,
+      border: "1px solid rgba(0,0,0,0.06)",
+      padding: 32,
+      boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function FocusInput({ style, ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+  const [focused, setFocused] = useState(false);
+  return (
+    <input
+      {...props}
+      style={{ ...inputStyle, ...style, ...focusStyle(focused) }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    />
   );
 }
 
@@ -95,19 +136,27 @@ function thaiDateToISO(thaiDate: string): string {
 }
 
 function UnitSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [focused, setFocused] = useState(false);
   return (
-    <div className="relative">
+    <div style={{ position: "relative" }}>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full appearance-none rounded-xl border border-slate-200 pl-3 pr-7 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 bg-white transition-all"
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        style={{
+          ...inputStyle,
+          appearance: "none",
+          paddingRight: 32,
+          ...focusStyle(focused),
+        }}
       >
         {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
         {value && !UNITS.includes(value) && <option value={value}>{value}</option>}
       </select>
       <ChevronDown
         size={13}
-        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+        style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#C4B9AD", pointerEvents: "none" }}
       />
     </div>
   );
@@ -221,7 +270,6 @@ export default function NewPOPage() {
     [itemMap, setLine]
   );
 
-
   const totals = lines.reduce(
     (acc, l) => {
       const c = calcLine(l);
@@ -263,116 +311,123 @@ export default function NewPOPage() {
     n.toLocaleString("th-TH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-10">
-      <div className="mb-7">
-        <Link
-          href="/po"
-          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 mb-3 transition-colors"
-        >
-          <ArrowLeft size={15} />
-          กลับรายการ PO
-        </Link>
-        <h1 className="text-2xl font-bold text-slate-900">สร้างใบสั่งซื้อใหม่</h1>
+    <main style={{ background: "#F0EDE9", minHeight: "100vh" }}>
+      {/* Page Header */}
+      <div style={{ padding: "44px 44px 32px" }}>
+        <div style={{ fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 900, letterSpacing: "-0.04em", color: "#1C1815", lineHeight: 1 }}>
+          สร้างใบสั่งซื้อ
+        </div>
+        <div style={{ fontSize: "clamp(2rem,4vw,3rem)", fontWeight: 900, letterSpacing: "-0.04em", color: "#C4B9AD", lineHeight: 1 }}>
+          PO ใหม่
+        </div>
       </div>
 
+      <form ref={formRef} onSubmit={handleSubmit} style={{ padding: "0 44px 48px", display: "flex", flexDirection: "column", gap: 20 }}>
 
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
+        {/* Header Card */}
+        <Card>
+          <SectionHeader>ข้อมูลใบสั่งซื้อ</SectionHeader>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20 }}>
 
-        {/* Header card */}
-        <section
-          className="bg-white rounded-2xl p-6 grid sm:grid-cols-2 gap-5"
-          style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" }}
-        >
-          <div className="sm:col-span-2 flex items-center gap-2 pb-1">
-            <h2 className="text-sm font-bold text-slate-700">ข้อมูลใบสั่งซื้อ</h2>
-            <div className="h-px flex-1 bg-slate-100" />
+            <div>
+              <Label required>วันที่สั่งซื้อ</Label>
+              <DatePicker
+                required
+                value={header.orderDate}
+                onChange={(v) => setHeader({ ...header, orderDate: v })}
+              />
+            </div>
+
+            <div>
+              <Label required>ชื่อร้านค้า / ผู้จัดหา</Label>
+              <Combobox
+                options={suppliers.map((s) => s.name)}
+                value={header.supplierName}
+                onChange={(v) => setHeader({ ...header, supplierName: v })}
+                placeholder="เลือกหรือพิมพ์ชื่อร้านค้า"
+                required
+              />
+              {header.supplierName && supplierItems.length === 0 && (
+                <p style={{ marginTop: 6, fontSize: 12, color: "#D97706" }}>
+                  ไม่พบสินค้าของร้านนี้ใน catalog — กรอกชื่อสินค้าเองได้เลย
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label required>ชื่อผู้สั่งซื้อ</Label>
+              <Combobox
+                options={people}
+                value={header.requester}
+                onChange={(v) => setHeader({ ...header, requester: v })}
+                placeholder="เลือกหรือพิมพ์ชื่อ"
+                required
+              />
+            </div>
+
+            <div>
+              <Label>ผู้ตรวจสอบ</Label>
+              <Combobox
+                options={people}
+                value={header.reviewer}
+                onChange={(v) => setHeader({ ...header, reviewer: v })}
+                placeholder="เลือกหรือพิมพ์ชื่อ"
+              />
+            </div>
+
+            <div>
+              <Label required>ผู้อนุมัติ</Label>
+              <Combobox
+                options={people}
+                value={header.approver}
+                onChange={(v) => setHeader({ ...header, approver: v })}
+                placeholder="เลือกหรือพิมพ์ชื่อ"
+                required
+              />
+            </div>
+
+            <div>
+              <Label>PO เดิม (ถ้ามี)</Label>
+              <FocusInput
+                placeholder="เช่น PO-68/0010"
+                value={header.prevPO}
+                onChange={(e) => setHeader({ ...header, prevPO: e.target.value })}
+              />
+            </div>
+
+            <div style={{ gridColumn: "1 / -1" }}>
+              <Label>หมายเหตุ</Label>
+              <FocusInput
+                value={header.notes}
+                onChange={(e) => setHeader({ ...header, notes: e.target.value })}
+              />
+            </div>
+
           </div>
+        </Card>
 
-          <Field label="วันที่สั่งซื้อ" required>
-            <DatePicker
-              required
-              value={header.orderDate}
-              onChange={(v) => setHeader({ ...header, orderDate: v })}
-            />
-          </Field>
-
-          <Field label="ชื่อร้านค้า / ผู้จัดหา" required>
-            <Combobox
-              options={suppliers.map((s) => s.name)}
-              value={header.supplierName}
-              onChange={(v) => setHeader({ ...header, supplierName: v })}
-              placeholder="เลือกหรือพิมพ์ชื่อร้านค้า"
-              required
-            />
-            {header.supplierName && supplierItems.length === 0 && (
-              <p className="mt-1 text-xs text-amber-600">ไม่พบสินค้าของร้านนี้ใน catalog — กรอกชื่อสินค้าเองได้เลย</p>
-            )}
-          </Field>
-
-          <Field label="ชื่อผู้สั่งซื้อ" required>
-            <Combobox
-              options={people}
-              value={header.requester}
-              onChange={(v) => setHeader({ ...header, requester: v })}
-              placeholder="เลือกหรือพิมพ์ชื่อ"
-              required
-            />
-          </Field>
-
-          <Field label="ผู้ตรวจสอบ">
-            <Combobox
-              options={people}
-              value={header.reviewer}
-              onChange={(v) => setHeader({ ...header, reviewer: v })}
-              placeholder="เลือกหรือพิมพ์ชื่อ"
-            />
-          </Field>
-
-          <Field label="ผู้อนุมัติ" required>
-            <Combobox
-              options={people}
-              value={header.approver}
-              onChange={(v) => setHeader({ ...header, approver: v })}
-              placeholder="เลือกหรือพิมพ์ชื่อ"
-              required
-            />
-          </Field>
-
-          <Field label="PO เดิม (ถ้ามี)">
-            <input
-              className={inputCls}
-              placeholder="เช่น PO-68/0010"
-              value={header.prevPO}
-              onChange={(e) => setHeader({ ...header, prevPO: e.target.value })}
-            />
-          </Field>
-
-          <Field label="หมายเหตุ" span2>
-            <input
-              className={inputCls}
-              value={header.notes}
-              onChange={(e) => setHeader({ ...header, notes: e.target.value })}
-            />
-          </Field>
-        </section>
-
-        {/* Line items card */}
-        <section
-          className="bg-white rounded-2xl p-6"
-          style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" }}
-        >
-          <div className="flex items-center gap-2 mb-5">
-            <h2 className="text-sm font-bold text-slate-700">รายการสินค้า</h2>
-            {lines.filter((l) => l.itemName.trim()).length > 0 && (
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                {lines.filter((l) => l.itemName.trim()).length}
-              </span>
-            )}
-            <div className="h-px flex-1 bg-slate-100" />
+        {/* Line Items Card */}
+        <Card>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <SectionHeader>รายการสินค้า</SectionHeader>
+              {lines.filter((l) => l.itemName.trim()).length > 0 && (
+                <span style={{
+                  fontSize: 11, fontWeight: 800, padding: "2px 8px", borderRadius: 20,
+                  background: "rgba(5,150,105,0.1)", color: ACCENT, marginBottom: 16,
+                }}>
+                  {lines.filter((l) => l.itemName.trim()).length}
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setLines((prev) => [...prev, emptyLine()])}
-              className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-semibold bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
+              style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "8px 14px",
+                borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                background: "rgba(5,150,105,0.08)", color: ACCENT, border: "none",
+              }}
             >
               <Plus size={13} />
               เพิ่มรายการ
@@ -380,80 +435,91 @@ export default function NewPOPage() {
           </div>
 
           <div style={{ overflowX: "auto" }}>
-            <table className="w-full text-sm" style={{ minWidth: "780px" }}>
+            <table style={{ width: "100%", minWidth: 780, fontSize: 14, borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid #F1F5F9" }}>
-                  <th className="font-semibold text-left pb-3 pr-3 text-xs text-slate-400 uppercase tracking-wide" style={{ width: "30%" }}>ชื่อสินค้า *</th>
-                  <th className="font-semibold text-center pb-3 px-2 text-xs text-slate-400 uppercase tracking-wide" style={{ width: "12%" }}>จำนวน</th>
-                  <th className="font-semibold text-left pb-3 px-2 text-xs text-slate-400 uppercase tracking-wide" style={{ width: "13%" }}>หน่วย</th>
-                  <th className="font-semibold text-right pb-3 px-2 text-xs text-slate-400 uppercase tracking-wide" style={{ width: "14%" }}>ราคา/หน่วย</th>
-                  <th className="font-semibold text-right pb-3 px-2 text-xs text-slate-400 uppercase tracking-wide" style={{ width: "16%" }}>ยอดรวม (incl)</th>
-                  <th className="font-semibold text-left pb-3 px-2 text-xs text-slate-400 uppercase tracking-wide" style={{ width: "12%" }}>หมายเหตุ</th>
-                  <th style={{ width: "3%" }}></th>
+                <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.06)" }}>
+                  {[
+                    { label: "ชื่อสินค้า *", w: "30%", align: "left" },
+                    { label: "จำนวน", w: "10%", align: "center" },
+                    { label: "หน่วย", w: "12%", align: "left" },
+                    { label: "ราคา/หน่วย", w: "13%", align: "right" },
+                    { label: "ยอดรวม (incl)", w: "15%", align: "right" },
+                    { label: "หมายเหตุ", w: "15%", align: "left" },
+                    { label: "", w: "5%", align: "center" },
+                  ].map((col, i) => (
+                    <th key={i} style={{
+                      width: col.w, textAlign: col.align as React.CSSProperties["textAlign"],
+                      paddingBottom: 10, paddingLeft: 6, paddingRight: 6,
+                      fontSize: 11, fontWeight: 800, textTransform: "uppercase",
+                      letterSpacing: "0.08em", color: "#C4B9AD",
+                    }}>
+                      {col.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {lines.map((line, idx) => {
                   const c = calcLine(line);
                   return (
-                    <tr key={idx} style={{ borderBottom: "1px solid #F8FAFC" }}>
-                      <td className="py-2 pr-3">
+                    <tr key={idx} style={{ borderBottom: "1px solid rgba(0,0,0,0.03)" }}>
+                      <td style={{ padding: "8px 6px 8px 0" }}>
                         <Combobox
                           options={itemOptions.map((i) => i.name)}
                           value={line.itemName}
                           onChange={(v) => autoFillItem(idx, v)}
                           placeholder="ชื่อสินค้า"
-                          emptyMessage={header.supplierName && supplierItems.length === 0 ? "ไม่มีรายการสินค้าจากร้านค้านี้ในระบบ — กรอกชื่อสินค้าเองได้เลย" : undefined}
+                          emptyMessage={header.supplierName && supplierItems.length === 0
+                            ? "ไม่มีรายการสินค้าจากร้านค้านี้ในระบบ — กรอกชื่อสินค้าเองได้เลย"
+                            : undefined}
                         />
                       </td>
-                      <td className="py-2 px-2">
-                        <input
+                      <td style={{ padding: "8px 6px" }}>
+                        <FocusInput
                           type="number"
                           min="0"
                           step="any"
-                          className={numCls + " text-center"}
+                          style={{ textAlign: "center" }}
                           value={line.qty}
                           onChange={(e) => setLine(idx, { qty: e.target.value })}
                         />
                       </td>
-                      <td className="py-2 px-2">
-                        <UnitSelect
-                          value={line.unit}
-                          onChange={(v) => setLine(idx, { unit: v })}
-                        />
+                      <td style={{ padding: "8px 6px" }}>
+                        <UnitSelect value={line.unit} onChange={(v) => setLine(idx, { unit: v })} />
                       </td>
-                      <td className="py-2 px-2">
-                        <input
+                      <td style={{ padding: "8px 6px" }}>
+                        <FocusInput
                           type="number"
                           min="0"
                           step="any"
-                          className={numCls}
+                          style={{ textAlign: "right" }}
                           value={line.priceExclVat}
                           onChange={(e) => setLine(idx, { priceExclVat: e.target.value })}
                         />
                       </td>
-                      <td className="py-2 px-2 text-right">
+                      <td style={{ padding: "8px 6px", textAlign: "right" }}>
                         {c.totalIncl > 0 ? (
-                          <span className="font-semibold text-slate-800 tabular-nums">
+                          <span style={{ fontWeight: 700, color: "#1C1815", fontVariantNumeric: "tabular-nums" }}>
                             {fmt(c.totalIncl)}
                           </span>
                         ) : (
-                          <span className="text-slate-300">—</span>
+                          <span style={{ color: "#C4B9AD" }}>—</span>
                         )}
                       </td>
-                      <td className="py-2 px-2">
-                        <input
-                          className={inputCls}
+                      <td style={{ padding: "8px 6px" }}>
+                        <FocusInput
                           value={line.itemNote}
                           onChange={(e) => setLine(idx, { itemNote: e.target.value })}
                         />
                       </td>
-                      <td className="py-2 pl-2 text-center">
+                      <td style={{ padding: "8px 6px", textAlign: "center" }}>
                         {lines.length > 1 && (
                           <button
                             type="button"
                             onClick={() => setLines((prev) => prev.filter((_, i) => i !== idx))}
-                            className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+                            style={{ background: "none", border: "none", cursor: "pointer", color: "#C4B9AD", padding: 6, borderRadius: 8 }}
+                            onMouseEnter={e => { e.currentTarget.style.color = "#EF4444"; e.currentTarget.style.background = "#FEF2F2"; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = "#C4B9AD"; e.currentTarget.style.background = "none"; }}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -465,81 +531,103 @@ export default function NewPOPage() {
               </tbody>
             </table>
           </div>
-        </section>
+        </Card>
 
-        {/* Summary card */}
-        <section
-          className="bg-white rounded-2xl p-6"
-          style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)" }}
-        >
-          <div className="flex items-center gap-2 mb-5">
-            <h2 className="text-sm font-bold text-slate-700">สรุปยอด</h2>
-            <div className="h-px flex-1 bg-slate-100" />
-          </div>
-          <div className="flex gap-8 flex-col sm:flex-row">
-            <div className="grid sm:grid-cols-3 gap-4 flex-1">
-              <Field label="ค่ามัดจำ (บาท)">
-                <input type="number" min="0" step="any" className={numCls} placeholder="0.00"
-                  value={header.deposit} onChange={(e) => setHeader({ ...header, deposit: e.target.value })} />
-              </Field>
-              <Field label="ค่าขนส่ง (บาท)">
-                <input type="number" min="0" step="any" className={numCls} placeholder="0.00"
-                  value={header.shipping} onChange={(e) => setHeader({ ...header, shipping: e.target.value })} />
-              </Field>
-              <Field label="ส่วนลด (บาท)">
-                <input type="number" min="0" step="any" className={numCls} placeholder="0.00"
-                  value={header.discount} onChange={(e) => setHeader({ ...header, discount: e.target.value })} />
-              </Field>
-            </div>
-
-            <div className="min-w-[240px] space-y-2.5 text-sm">
-              <div className="flex justify-between text-slate-500">
-                <span>ยอดก่อน VAT</span>
-                <span className="tabular-nums font-medium">{fmt(totals.excl)} ฿</span>
+        {/* Summary Card */}
+        <Card>
+          <SectionHeader>สรุปยอด</SectionHeader>
+          <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, flex: 1 }}>
+              <div>
+                <Label>ค่ามัดจำ (บาท)</Label>
+                <FocusInput
+                  type="number" min="0" step="any"
+                  style={{ textAlign: "right" }}
+                  placeholder="0.00"
+                  value={header.deposit}
+                  onChange={(e) => setHeader({ ...header, deposit: e.target.value })}
+                />
               </div>
-              <div className="flex justify-between text-slate-500">
-                <span>VAT 7%</span>
-                <span className="tabular-nums font-medium">{fmt(totals.vat)} ฿</span>
+              <div>
+                <Label>ค่าขนส่ง (บาท)</Label>
+                <FocusInput
+                  type="number" min="0" step="any"
+                  style={{ textAlign: "right" }}
+                  placeholder="0.00"
+                  value={header.shipping}
+                  onChange={(e) => setHeader({ ...header, shipping: e.target.value })}
+                />
               </div>
-              {shipping > 0 && (
-                <div className="flex justify-between text-slate-500">
-                  <span>ค่าขนส่ง</span>
-                  <span className="tabular-nums">+{fmt(shipping)} ฿</span>
-                </div>
-              )}
-              {discount > 0 && (
-                <div className="flex justify-between text-slate-500">
-                  <span>ส่วนลด</span>
-                  <span className="tabular-nums text-red-500">−{fmt(discount)} ฿</span>
-                </div>
-              )}
-              <div
-                className="flex justify-between font-bold text-base pt-3"
-                style={{ borderTop: "2px solid #F1F5F9" }}
-              >
-                <span className="text-slate-700">รวมเป็นเงิน</span>
-                <span className="tabular-nums text-emerald-700">{fmt(grandTotal)} ฿</span>
+              <div>
+                <Label>ส่วนลด (บาท)</Label>
+                <FocusInput
+                  type="number" min="0" step="any"
+                  style={{ textAlign: "right" }}
+                  placeholder="0.00"
+                  value={header.discount}
+                  onChange={(e) => setHeader({ ...header, discount: e.target.value })}
+                />
               </div>
             </div>
-          </div>
-        </section>
 
-        <div className="flex justify-end gap-3 pt-1">
+            <div style={{ minWidth: 260 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#5C5450" }}>
+                  <span>ยอดก่อน VAT</span>
+                  <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(totals.excl)} ฿</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#5C5450" }}>
+                  <span>VAT 7%</span>
+                  <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(totals.vat)} ฿</span>
+                </div>
+                {shipping > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#5C5450" }}>
+                    <span>ค่าขนส่ง</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums" }}>+{fmt(shipping)} ฿</span>
+                  </div>
+                )}
+                {discount > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14, color: "#5C5450" }}>
+                    <span>ส่วนลด</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums", color: "#EF4444" }}>−{fmt(discount)} ฿</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 18, fontWeight: 800, color: "#1C1815", paddingTop: 12, borderTop: "2px solid rgba(0,0,0,0.06)", marginTop: 4 }}>
+                  <span>รวมเป็นเงิน</span>
+                  <span style={{ color: ACCENT, fontVariantNumeric: "tabular-nums" }}>{fmt(grandTotal)} ฿</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Actions */}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, paddingTop: 4 }}>
           <Link
             href="/po"
-            className="rounded-xl border border-slate-200 bg-white text-slate-600 px-6 py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors"
+            style={{
+              padding: "14px 28px", borderRadius: 16, fontWeight: 700, fontSize: 14,
+              background: "white", color: "#5C5450", border: "1.5px solid rgba(0,0,0,0.08)",
+              textDecoration: "none", display: "inline-block",
+            }}
           >
             ยกเลิก
           </Link>
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2.5 rounded-xl bg-emerald-600 text-white px-7 py-2.5 text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 transition-all shadow-sm hover:-translate-y-0.5"
+            style={{
+              padding: "14px 32px", borderRadius: 16, fontWeight: 800, fontSize: 15,
+              background: saving ? "#C4B9AD" : ACCENT, color: "white",
+              border: "none", cursor: saving ? "not-allowed" : "pointer",
+              boxShadow: `0 4px 20px ${ACCENT_SHADOW}`,
+              display: "flex", alignItems: "center", gap: 8,
+            }}
           >
             {saving ? (
-              <><Loader2 size={14} className="animate-spin" /> กำลังบันทึก...</>
+              <><Loader2 size={15} style={{ animation: "spin 1s linear infinite" }} /> กำลังบันทึก...</>
             ) : (
-              <>บันทึก PO <kbd className="text-[10px] font-mono bg-emerald-500 px-1.5 py-0.5 rounded opacity-70">⌘↵</kbd></>
+              <>บันทึก PO <kbd style={{ fontSize: 10, fontFamily: "monospace", background: "rgba(255,255,255,0.2)", padding: "2px 6px", borderRadius: 6 }}>⌘↵</kbd></>
             )}
           </button>
         </div>

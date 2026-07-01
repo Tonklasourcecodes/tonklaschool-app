@@ -9,8 +9,18 @@ const emptyForm = {
   isServiceFee: "FALSE", vat: "", supplierSku: "", note: "",
 };
 
-const inputCls =
-  "w-full rounded-[11px] border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 bg-white transition-all";
+const inputStyle: React.CSSProperties = {
+  width: "100%",
+  borderRadius: 11,
+  border: "1px solid rgba(0,0,0,0.10)",
+  padding: "10px 12px",
+  fontSize: 13,
+  outline: "none",
+  background: "white",
+  color: "#1C1917",
+  transition: "all 0.15s",
+  boxSizing: "border-box",
+};
 
 type EditForm = { name: string; unit: string; price: string; supplierSku: string; note: string };
 type EditModal = { item: Item; form: EditForm; saving: boolean };
@@ -114,34 +124,34 @@ export default function ItemsPage() {
   const priceChanged = Math.abs(priceDelta) > 0.01 && newPrice !== oldPrice;
 
   return (
-    <div className="min-h-full" style={{ background: "var(--bg)" }}>
-      {/* Page header */}
-      <div
-        className="px-8 pt-8 pb-6"
-        style={{
-          background: "linear-gradient(180deg, rgba(5,150,105,0.06) 0%, transparent 100%)",
-          borderBottom: "1px solid rgba(5,150,105,0.07)",
-        }}
-      >
-        <div className="flex items-center justify-between mb-5">
+    <div style={{ minHeight: "100%", background: "#F0EDE9" }}>
+      {/* Header */}
+      <div style={{ padding: "44px 44px 0" }}>
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#059669", marginBottom: 8 }}>
+          สินค้า
+        </p>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16 }}>
           <div>
-            <h1 className="font-bold tracking-tight" style={{ fontFamily: "var(--font-display)", fontSize: "1.7rem", color: "#111110", letterSpacing: "-0.02em" }}>
-              รายการสินค้า <span style={{ color: "#059669" }}>(Items)</span>
+            <h1 style={{ fontSize: "clamp(2.8rem,5vw,4rem)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 0.95, color: "#111110", margin: 0 }}>
+              รายการสินค้า
             </h1>
-            <p className="text-sm mt-1" style={{ color: "#A8A29E" }}>
-              {loading ? "กำลังโหลด..." : `${allItems.length} รายการทั้งหมด`}
-            </p>
+            {!loading && (
+              <p style={{ fontSize: 13, color: "#A8A29E", marginTop: 10 }}>
+                <span style={{ fontSize: "clamp(1.8rem,3vw,2.6rem)", fontWeight: 900, color: "#111110", lineHeight: 1 }}>{allItems.length}</span>
+                {" "}รายการทั้งหมด
+              </p>
+            )}
           </div>
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
             style={{
-              background: showForm
-                ? "white"
-                : "linear-gradient(135deg, #34d399, #059669)",
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "10px 20px", borderRadius: 14, fontSize: 13, fontWeight: 700,
+              border: "none", cursor: "pointer", transition: "all 0.15s",
+              background: showForm ? "white" : "#059669",
               color: showForm ? "#64748B" : "white",
-              border: showForm ? "1px solid rgba(0,0,0,0.08)" : "none",
-              boxShadow: showForm ? "none" : "0 2px 10px rgba(5,150,105,0.3)",
+              boxShadow: showForm ? "0 2px 8px rgba(0,0,0,0.06)" : "0 4px 14px rgba(5,150,105,0.3)",
+              marginBottom: 4,
             }}
           >
             {showForm ? <X size={15} /> : <Plus size={15} strokeWidth={2.5} />}
@@ -149,16 +159,17 @@ export default function ItemsPage() {
           </button>
         </div>
 
-        {/* Supplier filter chips */}
+        {/* Supplier filter pills */}
         {suppliersList.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          <div style={{ display: "flex", gap: 8, overflowX: "auto", marginTop: 20, paddingBottom: 4 }}>
             <button
               onClick={() => setFilterSupplier("")}
-              className="shrink-0 text-xs px-3.5 py-1.5 rounded-full font-semibold transition-all"
               style={{
-                background: !filterSupplier ? "#059669" : "rgba(255,255,255,0.7)",
+                flexShrink: 0, padding: "8px 14px", borderRadius: 12, fontSize: 12, fontWeight: 700,
+                border: "none", cursor: "pointer", transition: "all 0.12s",
+                background: !filterSupplier ? "#111110" : "white",
                 color: !filterSupplier ? "white" : "#78716C",
-                border: !filterSupplier ? "none" : "1px solid rgba(0,0,0,0.07)",
+                boxShadow: !filterSupplier ? "none" : "0 1px 4px rgba(0,0,0,0.06)",
               }}
             >
               ทั้งหมด
@@ -167,12 +178,12 @@ export default function ItemsPage() {
               <button
                 key={s}
                 onClick={() => setFilterSupplier(s === filterSupplier ? "" : s)}
-                className="shrink-0 text-xs px-3.5 py-1.5 rounded-full font-medium transition-all"
                 style={{
-                  background: filterSupplier === s ? "#ECFDF5" : "rgba(255,255,255,0.7)",
-                  color: filterSupplier === s ? "#166534" : "#78716C",
-                  border: filterSupplier === s ? "1px solid #BBF7D0" : "1px solid rgba(0,0,0,0.07)",
-                  fontWeight: filterSupplier === s ? 600 : 400,
+                  flexShrink: 0, padding: "8px 14px", borderRadius: 12, fontSize: 12, fontWeight: 700,
+                  border: "none", cursor: "pointer", transition: "all 0.12s",
+                  background: filterSupplier === s ? "#111110" : "white",
+                  color: filterSupplier === s ? "white" : "#78716C",
+                  boxShadow: filterSupplier === s ? "none" : "0 1px 4px rgba(0,0,0,0.06)",
                 }}
               >
                 {s}
@@ -182,13 +193,12 @@ export default function ItemsPage() {
         )}
       </div>
 
-      <div className="px-8 py-5">
-        {/* Search */}
-        <div className="relative mb-4">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: "#B4A99E" }} />
+      {/* Filters / Search */}
+      <div style={{ padding: "0 44px 24px", marginTop: 28 }}>
+        <div style={{ position: "relative" }}>
+          <Search size={14} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#B4A99E", pointerEvents: "none" }} />
           <input
-            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl outline-none transition-all"
-            style={{ background: "white", border: "1px solid rgba(0,0,0,0.08)", color: "#1C1917", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
+            style={{ ...inputStyle, paddingLeft: 40, borderRadius: 14, border: "1px solid rgba(0,0,0,0.08)", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}
             placeholder="ค้นหาชื่อสินค้า ร้านค้า หรือรหัส..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -196,123 +206,143 @@ export default function ItemsPage() {
             onBlur={(e) => { e.target.style.borderColor = "rgba(0,0,0,0.08)"; e.target.style.boxShadow = "0 1px 3px rgba(0,0,0,0.04)"; }}
           />
         </div>
+      </div>
 
+      {/* Content */}
+      <div style={{ padding: "0 44px 48px" }}>
         {error && (
-          <div className="mb-4 text-sm px-4 py-3 rounded-xl" style={{ background: "#FEF2F2", color: "#991B1B", border: "1px solid #FEE2E2" }}>{error}</div>
+          <div style={{ marginBottom: 16, fontSize: 13, padding: "12px 16px", borderRadius: 12, background: "#FEF2F2", color: "#991B1B", border: "1px solid #FEE2E2" }}>
+            {error}
+          </div>
         )}
         {saveOk && (
-          <div className="mb-4 text-sm px-4 py-3 rounded-xl font-medium" style={{ background: "#ECFDF5", color: "#166534", border: "1px solid #BBF7D0" }}>✓ {saveOk}</div>
+          <div style={{ marginBottom: 16, fontSize: 13, padding: "12px 16px", borderRadius: 12, fontWeight: 600, background: "#ECFDF5", color: "#166534", border: "1px solid #BBF7D0" }}>
+            ✓ {saveOk}
+          </div>
         )}
 
         {/* Add form */}
         {showForm && (
           <form onSubmit={handleSubmit}
-            className="bg-white rounded-[18px] p-5 mb-5 grid sm:grid-cols-2 gap-4"
-            style={{ boxShadow: "0 2px 12px rgba(5,150,105,0.08)", border: "1px solid rgba(5,150,105,0.12)" }}
+            style={{
+              background: "white", borderRadius: 24, padding: 24, marginBottom: 20,
+              display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16,
+              border: "1px solid rgba(5,150,105,0.12)", boxShadow: "0 2px 12px rgba(5,150,105,0.08)",
+            }}
           >
-            <label className="block sm:col-span-2">
-              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">ชื่อสินค้า *</span>
-              <input required className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            <label style={{ display: "block", gridColumn: "1 / -1" }}>
+              <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>ชื่อสินค้า *</span>
+              <input required style={inputStyle} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </label>
-            <label className="block">
-              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">ชื่อร้านค้า *</span>
-              <input required list="supplier-options" className={inputCls} value={form.supplierName} onChange={(e) => setForm({ ...form, supplierName: e.target.value })} />
+            <label style={{ display: "block" }}>
+              <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>ชื่อร้านค้า *</span>
+              <input required list="supplier-options" style={inputStyle} value={form.supplierName} onChange={(e) => setForm({ ...form, supplierName: e.target.value })} />
               <datalist id="supplier-options">{suppliers.map((s) => <option key={s.code} value={s.name} />)}</datalist>
             </label>
-            <label className="block">
-              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">หน่วย</span>
-              <input className={inputCls} placeholder="เช่น แพ็ค, ชิ้น" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
+            <label style={{ display: "block" }}>
+              <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>หน่วย</span>
+              <input style={inputStyle} placeholder="เช่น แพ็ค, ชิ้น" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
             </label>
-            <label className="block">
-              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">ราคา/หน่วย (บาท)</span>
-              <input className={inputCls} type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+            <label style={{ display: "block" }}>
+              <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>ราคา/หน่วย (บาท)</span>
+              <input style={inputStyle} type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
             </label>
-            <label className="block">
-              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">รหัสร้านค้า (SKU)</span>
-              <input className={inputCls} value={form.supplierSku} onChange={(e) => setForm({ ...form, supplierSku: e.target.value })} />
+            <label style={{ display: "block" }}>
+              <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>รหัสร้านค้า (SKU)</span>
+              <input style={inputStyle} value={form.supplierSku} onChange={(e) => setForm({ ...form, supplierSku: e.target.value })} />
             </label>
-            <label className="block sm:col-span-2">
-              <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">หมายเหตุ</span>
-              <input className={inputCls} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
+            <label style={{ display: "block", gridColumn: "1 / -1" }}>
+              <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>หมายเหตุ</span>
+              <input style={inputStyle} value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} />
             </label>
-            <div className="sm:col-span-2 flex justify-end">
+            <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end" }}>
               <button type="submit" disabled={saving}
-                className="rounded-xl text-white px-6 py-2.5 text-sm font-bold disabled:opacity-50 transition-all hover:-translate-y-0.5"
-                style={{ background: "linear-gradient(135deg, #34d399, #059669)", boxShadow: "0 2px 10px rgba(5,150,105,0.3)" }}>
+                style={{
+                  background: "linear-gradient(135deg, #34d399, #059669)", color: "white",
+                  border: "none", borderRadius: 12, padding: "10px 24px", fontSize: 13, fontWeight: 700,
+                  cursor: saving ? "not-allowed" : "pointer", opacity: saving ? 0.6 : 1,
+                  boxShadow: "0 2px 10px rgba(5,150,105,0.3)",
+                }}>
                 {saving ? "กำลังบันทึก..." : "บันทึกสินค้า"}
               </button>
             </div>
           </form>
         )}
 
-        {/* Table */}
-        <div
-          className="bg-white rounded-[18px] overflow-hidden"
-          style={{ border: "1px solid rgba(0,0,0,0.055)", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}
-        >
+        {/* Items list */}
+        <div style={{ background: "white", borderRadius: 24, border: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 2px 12px rgba(0,0,0,0.04)", overflow: "hidden" }}>
           {loading ? (
-            <div className="p-4 space-y-2.5">{[...Array(8)].map((_, i) => <div key={i} className="h-12 rounded-xl skeleton" />)}</div>
+            <div style={{ padding: 20 }}>
+              {[...Array(8)].map((_, i) => (
+                <div key={i} style={{ height: 52, borderRadius: 12, background: "rgba(0,0,0,0.05)", marginBottom: 10, animation: "pulse 1.5s infinite" }} />
+              ))}
+            </div>
           ) : displayItems.length === 0 ? (
-            <div className="p-14 text-center">
-              <Package size={32} className="mx-auto mb-3" style={{ color: "#D4C8BC" }} />
-              <p className="text-sm font-semibold" style={{ color: "#A8A29E" }}>ไม่พบสินค้า</p>
-              <p className="text-xs mt-1" style={{ color: "#C4B9AD" }}>ลองเปลี่ยนตัวกรอง หรือเพิ่มสินค้าใหม่</p>
+            <div style={{ padding: "56px 20px", textAlign: "center" }}>
+              <Package size={32} style={{ color: "#D4C8BC", margin: "0 auto 12px" }} />
+              <p style={{ fontSize: 14, fontWeight: 600, color: "#A8A29E" }}>ไม่พบสินค้า</p>
+              <p style={{ fontSize: 12, color: "#C4B9AD", marginTop: 4 }}>ลองเปลี่ยนตัวกรอง หรือเพิ่มสินค้าใหม่</p>
             </div>
           ) : (
             <>
-              <table className="w-full">
-                <thead>
-                  <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.05)", background: "rgba(0,0,0,0.01)" }}>
-                    {["รหัส", "ชื่อสินค้า", "ร้านค้า", "หน่วย", "ราคา/หน่วย", ""].map((h) => (
-                      <th key={h} className={`px-5 py-3 text-[10px] font-bold uppercase tracking-[0.1em] ${h === "ราคา/หน่วย" ? "text-right" : "text-left"}`} style={{ color: "#B4A99E" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayItems.map((i) => (
-                    <tr
-                      key={i.code}
-                      className="group transition-colors"
-                      style={{ borderBottom: "1px solid rgba(0,0,0,0.035)" }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#F7FFF9"; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+              {/* Table header */}
+              <div style={{ display: "grid", gridTemplateColumns: "120px 1fr 160px 80px 120px 48px", padding: "10px 20px", borderBottom: "1px solid rgba(0,0,0,0.05)", background: "rgba(0,0,0,0.01)" }}>
+                {["รหัส", "ชื่อสินค้า", "ร้านค้า", "หน่วย", "ราคา/หน่วย", ""].map((h, idx) => (
+                  <p key={h + idx} style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "#B4A99E", margin: 0, textAlign: h === "ราคา/หน่วย" ? "right" : "left" }}>
+                    {h}
+                  </p>
+                ))}
+              </div>
+              {displayItems.map((i, idx) => (
+                <div
+                  key={i.code}
+                  style={{
+                    display: "grid", gridTemplateColumns: "120px 1fr 160px 80px 120px 48px",
+                    padding: "14px 20px", alignItems: "center",
+                    borderBottom: idx < displayItems.length - 1 ? "1px solid rgba(0,0,0,0.035)" : "none",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#F7FFF9"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                >
+                  <div>
+                    <span style={{ fontSize: 10, fontWeight: 700, fontFamily: "monospace", padding: "2px 8px", borderRadius: 6, background: "#ECFDF5", color: "#15803D" }}>
+                      {i.code}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "#1C1917", margin: 0 }}>{i.name}</p>
+                  <p style={{ fontSize: 13, color: "#78716C", margin: 0 }}>{i.supplierName}</p>
+                  <div>
+                    {i.unit
+                      ? <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 8, background: "#F8FAFC", color: "#475569", fontWeight: 500 }}>{i.unit}</span>
+                      : <span style={{ color: "#C4B9AD" }}>—</span>
+                    }
+                  </div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "#1C1917", margin: 0, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+                    {i.price ? `${parseFloat(i.price).toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿` : "—"}
+                  </p>
+                  <div style={{ display: "flex", justifyContent: "center" }}>
+                    <button
+                      onClick={() => openEdit(i)}
+                      style={{
+                        padding: 6, borderRadius: 8, border: "none", background: "transparent",
+                        color: "#C4B9AD", cursor: "pointer", transition: "all 0.12s", display: "flex",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#059669"; (e.currentTarget as HTMLElement).style.background = "#ECFDF5"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#C4B9AD"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
                     >
-                      <td className="px-5 py-4">
-                        <span className="text-[11px] font-bold font-mono px-2.5 py-1 rounded-lg" style={{ background: "#ECFDF5", color: "#15803D" }}>
-                          {i.code}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-[13px] font-semibold" style={{ color: "#1C1917" }}>{i.name}</td>
-                      <td className="px-5 py-4 text-[13px]" style={{ color: "#78716C" }}>{i.supplierName}</td>
-                      <td className="px-5 py-4">
-                        {i.unit ? (
-                          <span className="text-xs px-2 py-1 rounded-lg font-medium" style={{ background: "#F8FAFC", color: "#475569" }}>{i.unit}</span>
-                        ) : <span style={{ color: "#C4B9AD" }}>—</span>}
-                      </td>
-                      <td className="px-5 py-4 text-right font-bold tabular-nums text-[13px]" style={{ color: "#1C1917" }}>
-                        {i.price ? `${parseFloat(i.price).toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿` : "—"}
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <button
-                          onClick={() => openEdit(i)}
-                          className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg transition-all"
-                          style={{ color: "#B4A99E" }}
-                          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "#059669"; (e.currentTarget as HTMLElement).style.background = "#ECFDF5"; }}
-                          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "#B4A99E"; (e.currentTarget as HTMLElement).style.background = "transparent"; }}
-                        >
-                          <Pencil size={13} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="px-5 py-3 flex justify-between items-center" style={{ borderTop: "1px solid rgba(0,0,0,0.04)", background: "rgba(0,0,0,0.01)" }}>
-                <p className="text-xs" style={{ color: "#B4A99E" }}>
-                  แสดง <span className="font-semibold" style={{ color: "#78716C" }}>{displayItems.length}</span> จาก {allItems.length} รายการ
+                      <Pencil size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <div style={{ padding: "12px 20px", borderTop: "1px solid rgba(0,0,0,0.04)", background: "rgba(0,0,0,0.01)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <p style={{ fontSize: 12, color: "#B4A99E", margin: 0 }}>
+                  แสดง <span style={{ fontWeight: 700, color: "#78716C" }}>{displayItems.length}</span> จาก {allItems.length} รายการ
                 </p>
                 {filterSupplier && (
-                  <button onClick={() => setFilterSupplier("")} className="flex items-center gap-1 text-xs" style={{ color: "#059669" }}>
+                  <button onClick={() => setFilterSupplier("")}
+                    style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#059669", background: "none", border: "none", cursor: "pointer" }}>
                     <SlidersHorizontal size={11} /> ล้างตัวกรอง
                   </button>
                 )}
@@ -324,67 +354,79 @@ export default function ItemsPage() {
 
       {/* Edit Modal */}
       {editModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ animation: "backdropIn 0.15s ease-out" }}>
-          <div className="absolute inset-0 bg-black/20 backdrop-blur-[3px]" onClick={() => setEditModal(null)} />
-          <div className="relative bg-white rounded-[20px] shadow-2xl w-full max-w-md p-6" style={{ animation: "modalIn 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-            <div className="flex items-start justify-between mb-5">
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.2)", backdropFilter: "blur(3px)" }} onClick={() => setEditModal(null)} />
+          <div style={{ position: "relative", background: "white", borderRadius: 24, boxShadow: "0 20px 60px rgba(0,0,0,0.15)", width: "100%", maxWidth: 440, padding: 28, border: "1px solid rgba(0,0,0,0.06)" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
               <div>
-                <h3 className="text-base font-bold" style={{ color: "#111110" }}>แก้ไขสินค้า</h3>
-                <p className="text-xs font-mono mt-0.5" style={{ color: "#B4A99E" }}>{editModal.item.code}</p>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: "#111110", margin: 0 }}>แก้ไขสินค้า</h3>
+                <p style={{ fontSize: 11, fontFamily: "monospace", color: "#B4A99E", marginTop: 4 }}>{editModal.item.code}</p>
               </div>
-              <button onClick={() => setEditModal(null)} className="p-1.5 rounded-lg transition-colors hover:bg-slate-100" style={{ color: "#A8A29E" }}>
+              <button onClick={() => setEditModal(null)} style={{ padding: 6, borderRadius: 8, border: "none", background: "transparent", color: "#A8A29E", cursor: "pointer" }}>
                 <X size={15} />
               </button>
             </div>
 
-            <div className="space-y-4">
-              <label className="block">
-                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">ชื่อสินค้า</span>
-                <input className={inputCls} value={editModal.form.name} onChange={(e) => setEditModal((m) => m ? { ...m, form: { ...m.form, name: e.target.value } } : null)} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <label style={{ display: "block" }}>
+                <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>ชื่อสินค้า</span>
+                <input style={inputStyle} value={editModal.form.name} onChange={(e) => setEditModal((m) => m ? { ...m, form: { ...m.form, name: e.target.value } } : null)} />
               </label>
-              <label className="block">
-                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">หน่วย</span>
-                <input className={inputCls} placeholder="เช่น ชิ้น, แพ็ค" value={editModal.form.unit} onChange={(e) => setEditModal((m) => m ? { ...m, form: { ...m.form, unit: e.target.value } } : null)} />
+              <label style={{ display: "block" }}>
+                <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>หน่วย</span>
+                <input style={inputStyle} placeholder="เช่น ชิ้น, แพ็ค" value={editModal.form.unit} onChange={(e) => setEditModal((m) => m ? { ...m, form: { ...m.form, unit: e.target.value } } : null)} />
               </label>
 
               <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wide">ราคา/หน่วย (บาท)</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em" }}>ราคา/หน่วย (บาท)</span>
                   {priceChanged && (
-                    <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-semibold"
-                      style={{ background: priceDelta > 0 ? "#FEF3C7" : "#ECFDF5", color: priceDelta > 0 ? "#92400E" : "#166534" }}>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11,
+                      padding: "2px 8px", borderRadius: 20, fontWeight: 700,
+                      background: priceDelta > 0 ? "#FEF3C7" : "#ECFDF5",
+                      color: priceDelta > 0 ? "#92400E" : "#166534",
+                    }}>
                       {priceDelta > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                       {priceDelta > 0 ? "+" : ""}{priceDelta.toFixed(1)}%
                     </span>
                   )}
                 </div>
-                <input type="number" step="0.01" className={inputCls} value={editModal.form.price} onChange={(e) => setEditModal((m) => m ? { ...m, form: { ...m.form, price: e.target.value } } : null)} />
+                <input type="number" step="0.01" style={inputStyle} value={editModal.form.price} onChange={(e) => setEditModal((m) => m ? { ...m, form: { ...m.form, price: e.target.value } } : null)} />
                 {priceChanged && (
-                  <div className="mt-1.5 flex items-center gap-1 text-xs" style={{ color: "#A8A29E" }}>
+                  <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#A8A29E" }}>
                     <Minus size={10} />
-                    <span>ราคาเดิม: <span className="font-medium" style={{ color: "#78716C" }}>{oldPrice.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</span></span>
+                    <span>ราคาเดิม: <span style={{ fontWeight: 600, color: "#78716C" }}>{oldPrice.toLocaleString("th-TH", { minimumFractionDigits: 2 })} ฿</span></span>
                   </div>
                 )}
               </div>
 
-              <label className="block">
-                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">รหัสร้านค้า (SKU)</span>
-                <input className={inputCls} value={editModal.form.supplierSku} onChange={(e) => setEditModal((m) => m ? { ...m, form: { ...m.form, supplierSku: e.target.value } } : null)} />
+              <label style={{ display: "block" }}>
+                <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>รหัสร้านค้า (SKU)</span>
+                <input style={inputStyle} value={editModal.form.supplierSku} onChange={(e) => setEditModal((m) => m ? { ...m, form: { ...m.form, supplierSku: e.target.value } } : null)} />
               </label>
-              <label className="block">
-                <span className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-1.5">หมายเหตุ</span>
-                <input className={inputCls} value={editModal.form.note} onChange={(e) => setEditModal((m) => m ? { ...m, form: { ...m.form, note: e.target.value } } : null)} />
+              <label style={{ display: "block" }}>
+                <span style={{ display: "block", fontSize: 10, fontWeight: 700, color: "#A8A29E", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 6 }}>หมายเหตุ</span>
+                <input style={inputStyle} value={editModal.form.note} onChange={(e) => setEditModal((m) => m ? { ...m, form: { ...m.form, note: e.target.value } } : null)} />
               </label>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div style={{ display: "flex", gap: 12, marginTop: 24 }}>
               <button onClick={() => setEditModal(null)}
-                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium hover:bg-slate-50 transition-colors" style={{ color: "#64748B" }}>
+                style={{
+                  flex: 1, borderRadius: 12, border: "1px solid rgba(0,0,0,0.10)", padding: "11px 0",
+                  fontSize: 13, fontWeight: 600, color: "#64748B", background: "white", cursor: "pointer",
+                }}>
                 ยกเลิก
               </button>
               <button onClick={saveEdit} disabled={editModal.saving}
-                className="flex-1 rounded-xl text-white py-2.5 text-sm font-bold disabled:opacity-50 transition-all hover:-translate-y-0.5"
-                style={{ background: "linear-gradient(135deg, #34d399, #059669)", boxShadow: "0 2px 10px rgba(5,150,105,0.25)" }}>
+                style={{
+                  flex: 1, borderRadius: 12, border: "none", padding: "11px 0",
+                  fontSize: 13, fontWeight: 700, color: "white",
+                  background: "linear-gradient(135deg, #34d399, #059669)",
+                  boxShadow: "0 2px 10px rgba(5,150,105,0.25)",
+                  cursor: editModal.saving ? "not-allowed" : "pointer", opacity: editModal.saving ? 0.6 : 1,
+                }}>
                 {editModal.saving ? "กำลังบันทึก..." : "บันทึก"}
               </button>
             </div>

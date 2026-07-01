@@ -1,21 +1,56 @@
 "use client";
 import { useEffect, useState, use } from "react";
-import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { ChevronLeft, Loader2, AlertTriangle, Clock } from "lucide-react";
+import { Loader2, AlertTriangle, Clock } from "lucide-react";
 import type { MaintenanceRequest, MaintenanceStatus } from "@/lib/types";
 
 const STATUS_FLOW: MaintenanceStatus[] = ["open", "assigned", "in_progress", "resolved", "closed"];
 
 const STATUS_META: Record<MaintenanceStatus, { label: string; color: string; bg: string }> = {
-  open:        { label:"เปิด",              color:"#D97706", bg:"#FFF7ED" },
-  assigned:    { label:"มอบหมายแล้ว",      color:"#2563EB", bg:"#EFF6FF" },
-  in_progress: { label:"กำลังดำเนินการ",   color:"#7C3AED", bg:"#F5F3FF" },
-  resolved:    { label:"แก้ไขแล้ว",        color:"#059669", bg:"#ECFDF5" },
-  closed:      { label:"ปิด",              color:"#6B7280", bg:"#F9FAFB" },
+  open:        { label: "เปิด",              color: "#D97706", bg: "#FFF7ED" },
+  assigned:    { label: "มอบหมายแล้ว",      color: "#2563EB", bg: "#EFF6FF" },
+  in_progress: { label: "กำลังดำเนินการ",   color: "#7C3AED", bg: "#F5F3FF" },
+  resolved:    { label: "แก้ไขแล้ว",        color: "#059669", bg: "#ECFDF5" },
+  closed:      { label: "ปิด",              color: "#6B7280", bg: "#F9FAFB" },
 };
 
-const PRIORITY_TH: Record<string, string> = { low:"ต่ำ", medium:"กลาง", high:"สูง", urgent:"ด่วน!" };
+const PRIORITY_META: Record<string, { label: string; color: string; bg: string }> = {
+  low:    { label: "ต่ำ",   color: "#6B7280", bg: "#F3F4F6" },
+  medium: { label: "กลาง", color: "#D97706", bg: "#FEF3C7" },
+  high:   { label: "สูง",  color: "#DC2626", bg: "#FEE2E2" },
+  urgent: { label: "ด่วน!", color: "#991B1B", bg: "#FEE2E2" },
+};
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "#C4B9AD", marginBottom: 16 }}>
+      {children}
+    </p>
+  );
+}
+
+function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{
+      borderRadius: 24, background: "white",
+      border: "1px solid rgba(0,0,0,0.06)",
+      boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  if (!value) return null;
+  return (
+    <div style={{ display: "flex", gap: 16, padding: "10px 0", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+      <span style={{ fontSize: 12, width: 120, flexShrink: 0, color: "#9C9289", paddingTop: 1 }}>{label}</span>
+      <span style={{ fontSize: 14, color: "#1C1815" }}>{value}</span>
+    </div>
+  );
+}
 
 export default function MaintenanceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -55,21 +90,23 @@ export default function MaintenanceDetailPage({ params }: { params: Promise<{ id
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background:"var(--bg)" }}>
-        <Loader2 size={28} className="animate-spin" style={{ color:"var(--subtle)" }} />
+      <div style={{ background: "#F0EDE9", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Loader2 size={28} className="animate-spin" style={{ color: "#C4B9AD" }} />
       </div>
     );
   }
+
   if (!req) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background:"var(--bg)" }}>
-        <p style={{ color:"var(--muted)" }}>ไม่พบคำร้อง</p>
-        <Link href="/maintenance" style={{ marginTop:12, color:"var(--maintenance-accent)", fontSize:14 }}>กลับหน้ารายการ</Link>
+      <div style={{ background: "#F0EDE9", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
+        <p style={{ fontSize: 14, color: "#9C9289" }}>ไม่พบคำร้อง</p>
+        <a href="/maintenance" style={{ fontSize: 14, color: "#7C3AED" }}>กลับหน้ารายการ</a>
       </div>
     );
   }
 
   const meta = STATUS_META[req.status];
+  const priorityMeta = PRIORITY_META[req.priority] ?? { label: req.priority, color: "#6B7280", bg: "#F3F4F6" };
   const canUpdateStatus = role === "admin" || role === "maintenance_staff";
   const nextStatus = STATUS_FLOW[STATUS_FLOW.indexOf(req.status) + 1] as MaintenanceStatus | undefined;
   const nextLabel: Partial<Record<MaintenanceStatus, string>> = {
@@ -77,120 +114,166 @@ export default function MaintenanceDetailPage({ params }: { params: Promise<{ id
   };
 
   return (
-    <div className="min-h-screen" style={{ background:"var(--bg)" }}>
-      <div style={{ background:"white", borderBottom:"1px solid var(--border)", padding:"16px 24px" }}>
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
-          <Link href="/maintenance" style={{ color:"var(--subtle)", display:"flex", alignItems:"center" }}>
-            <ChevronLeft size={18} />
-          </Link>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 style={{ fontWeight:700, fontSize:"1.05rem", color:"var(--text)" }} className="truncate">{req.title}</h1>
-              {req.priority === "urgent" && <AlertTriangle size={14} style={{ color:"#991B1B", flexShrink:0 }} />}
+    <div style={{ background: "#F0EDE9", minHeight: "100vh" }}>
+      {/* ── Hero header ─────────────────────────── */}
+      <div style={{ padding: "44px 44px 32px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 24, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#9C9289", marginBottom: 8 }}>
+              {req.request_number}
+            </p>
+            <h1 style={{ fontSize: "2rem", fontWeight: 800, color: "#1C1815", letterSpacing: "-0.02em", lineHeight: 1.1, marginBottom: 12 }}>
+              {req.title}
+              {req.priority === "urgent" && (
+                <AlertTriangle size={20} style={{ color: "#991B1B", display: "inline", marginLeft: 8, verticalAlign: "middle" }} />
+              )}
+            </h1>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999, background: meta.bg, color: meta.color }}>
+                {meta.label}
+              </span>
+              <span style={{ display: "inline-flex", alignItems: "center", fontSize: 12, fontWeight: 700, padding: "5px 12px", borderRadius: 999, background: priorityMeta.bg, color: priorityMeta.color }}>
+                ระดับ: {priorityMeta.label}
+              </span>
             </div>
-            <p style={{ fontSize:11, color:"var(--subtle)" }}>{req.request_number}</p>
           </div>
-          <span style={{ padding:"4px 12px", borderRadius:20, fontSize:12, fontWeight:600, color:meta.color, background:meta.bg, flexShrink:0 }}>
-            {meta.label}
-          </span>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 space-y-4">
-        {/* Info */}
-        <div className="card p-5">
-          <h2 style={{ fontSize:11, fontWeight:700, color:"var(--subtle)", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:14 }}>ข้อมูลคำร้อง</h2>
-          <div className="grid grid-cols-2 gap-y-3">
-            {(
-              [
-                ["ผู้แจ้ง", req.reporter_name],
-                ["ระดับ", PRIORITY_TH[req.priority] ?? req.priority],
-                req.location ? ["สถานที่", req.location] : null,
-                req.category ? ["ประเภท", req.category.name] : null,
-                req.assigned_to_name ? ["ช่างที่รับผิดชอบ", req.assigned_to_name] : null,
-                req.estimated_cost ? ["ค่าใช้จ่ายโดยประมาณ", `฿${req.estimated_cost.toLocaleString()}`] : null,
-                req.actual_cost ? ["ค่าใช้จ่ายจริง", `฿${req.actual_cost.toLocaleString()}`] : null,
-                ["วันที่แจ้ง", new Date(req.created_at).toLocaleDateString("th-TH", { year:"numeric", month:"long", day:"numeric" })],
-              ] as ([string, string] | null)[]
-            ).filter((x): x is [string, string] => x !== null).map(([k, v]) => (
-              <div key={k}>
-                <p style={{ fontSize:11, color:"var(--subtle)", marginBottom:2 }}>{k}</p>
-                <p style={{ fontSize:13, fontWeight:600, color:"var(--text)" }}>{v}</p>
+      {/* ── Content ─────────────────────────────── */}
+      <div style={{ padding: "0 44px 48px", display: "flex", flexDirection: "column", gap: 16 }}>
+
+        {/* Info card */}
+        <Card>
+          <div style={{ padding: "28px 32px 24px" }}>
+            <SectionLabel>ข้อมูลคำร้อง</SectionLabel>
+            <InfoRow label="ผู้แจ้ง" value={req.reporter_name} />
+            {req.location && <InfoRow label="สถานที่" value={req.location} />}
+            {req.category && <InfoRow label="ประเภท" value={req.category.name} />}
+            {req.assigned_to_name && <InfoRow label="ช่างที่รับผิดชอบ" value={req.assigned_to_name} />}
+            {req.estimated_cost ? <InfoRow label="ค่าใช้จ่ายโดยประมาณ" value={`฿${req.estimated_cost.toLocaleString()}`} /> : null}
+            {req.actual_cost ? <InfoRow label="ค่าใช้จ่ายจริง" value={`฿${req.actual_cost.toLocaleString()}`} /> : null}
+            <InfoRow label="วันที่แจ้ง" value={new Date(req.created_at).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })} />
+            {req.description && (
+              <div style={{ marginTop: 16, padding: "14px 16px", borderRadius: 16, background: "#F8F6F2" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#C4B9AD", marginBottom: 6 }}>รายละเอียด</p>
+                <p style={{ fontSize: 14, color: "#1C1815", lineHeight: 1.6 }}>{req.description}</p>
               </div>
-            ))}
+            )}
           </div>
-          {req.description && (
-            <div style={{ marginTop:14, padding:"10px 14px", borderRadius:12, background:"var(--bg)" }}>
-              <p style={{ fontSize:12, color:"var(--muted)", marginBottom:4 }}>รายละเอียด</p>
-              <p style={{ fontSize:13, color:"var(--text)", lineHeight:1.6 }}>{req.description}</p>
-            </div>
-          )}
-        </div>
+        </Card>
 
         {/* Status timeline */}
         {req.history && req.history.length > 0 && (
-          <div className="card p-5">
-            <h2 style={{ fontSize:11, fontWeight:700, color:"var(--subtle)", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:14 }}>ประวัติสถานะ</h2>
-            <div className="space-y-3">
-              {req.history.map((h, i) => (
-                <div key={h.id ?? i} className="flex items-start gap-3">
-                  <div style={{ width:28, height:28, borderRadius:"50%", background:"var(--maintenance-light)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:2 }}>
-                    <Clock size={12} style={{ color:"var(--maintenance-accent)" }} />
+          <Card>
+            <div style={{ padding: "28px 32px 24px" }}>
+              <SectionLabel>ประวัติสถานะ</SectionLabel>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {req.history.map((h, i) => (
+                  <div key={h.id ?? i} style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                      background: "#F5F3FF", display: "flex", alignItems: "center", justifyContent: "center", marginTop: 2,
+                    }}>
+                      <Clock size={13} style={{ color: "#7C3AED" }} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: "#1C1815" }}>
+                        {h.new_status ? (STATUS_META[h.new_status as MaintenanceStatus]?.label ?? h.new_status) : "เริ่มต้น"}
+                      </p>
+                      <p style={{ fontSize: 11, color: "#9C9289", marginTop: 2 }}>
+                        {h.changed_by_email} · {new Date(h.changed_at).toLocaleDateString("th-TH")}
+                      </p>
+                      {h.note && <p style={{ fontSize: 13, color: "#6B6560", marginTop: 4 }}>{h.note}</p>}
+                    </div>
                   </div>
-                  <div>
-                    <p style={{ fontSize:13, fontWeight:600, color:"var(--text)" }}>
-                      {h.new_status ? (STATUS_META[h.new_status as MaintenanceStatus]?.label ?? h.new_status) : "เริ่มต้น"}
-                    </p>
-                    <p style={{ fontSize:11, color:"var(--subtle)", marginTop:1 }}>
-                      {h.changed_by_email} · {new Date(h.changed_at).toLocaleDateString("th-TH")}
-                    </p>
-                    {h.note && <p style={{ fontSize:12, color:"var(--muted)", marginTop:3 }}>{h.note}</p>}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Action panel */}
         {canUpdateStatus && req.status !== "closed" && (
-          <div className="card p-5">
-            <h2 style={{ fontSize:11, fontWeight:700, color:"var(--subtle)", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:14 }}>อัปเดตสถานะ</h2>
-            <div className="space-y-3">
-              <div>
-                <label style={{ fontSize:12, fontWeight:600, color:"var(--muted)", display:"block", marginBottom:6 }}>บันทึก (ถ้ามี)</label>
-                <input value={note} onChange={e => setNote(e.target.value)} placeholder="หมายเหตุเพิ่มเติม"
-                  style={{ width:"100%", padding:"8px 12px", borderRadius:10, border:"1px solid var(--border)", fontSize:13, outline:"none" }} />
-              </div>
-              {(nextStatus === "resolved" || nextStatus === "closed") && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label style={{ fontSize:12, fontWeight:600, color:"var(--muted)", display:"block", marginBottom:6 }}>ค่าใช้จ่ายโดยประมาณ (฿)</label>
-                    <input type="number" min={0} value={estimatedCost} onChange={e => setEstimatedCost(e.target.value === "" ? "" : Number(e.target.value))}
-                      style={{ width:"100%", padding:"8px 12px", borderRadius:10, border:"1px solid var(--border)", fontSize:13, outline:"none" }} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize:12, fontWeight:600, color:"var(--muted)", display:"block", marginBottom:6 }}>ค่าใช้จ่ายจริง (฿)</label>
-                    <input type="number" min={0} value={actualCost} onChange={e => setActualCost(e.target.value === "" ? "" : Number(e.target.value))}
-                      style={{ width:"100%", padding:"8px 12px", borderRadius:10, border:"1px solid var(--border)", fontSize:13, outline:"none" }} />
-                  </div>
+          <Card>
+            <div style={{ padding: "28px 32px 24px" }}>
+              <SectionLabel>อัปเดตสถานะ</SectionLabel>
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: "#9C9289", display: "block", marginBottom: 8 }}>บันทึก (ถ้ามี)</label>
+                  <input
+                    value={note}
+                    onChange={e => setNote(e.target.value)}
+                    placeholder="หมายเหตุเพิ่มเติม"
+                    style={{
+                      width: "100%", padding: "10px 14px", borderRadius: 12,
+                      border: "1px solid rgba(0,0,0,0.1)", fontSize: 14,
+                      outline: "none", background: "#F8F6F2", color: "#1C1815",
+                      boxSizing: "border-box",
+                    }}
+                  />
                 </div>
-              )}
-              <div className="flex gap-2 flex-wrap">
-                {nextStatus && (
-                  <button onClick={() => updateStatus(nextStatus)} disabled={!!acting}
-                    style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 18px", borderRadius:12, fontSize:13, fontWeight:700, background:"linear-gradient(135deg,#7C3AED,#6D28D9)", color:"white", border:"none", cursor:"pointer" }}>
-                    {acting === nextStatus && <Loader2 size={13} className="animate-spin" />}
-                    {nextLabel[nextStatus] ?? nextStatus}
-                  </button>
+                {(nextStatus === "resolved" || nextStatus === "closed") && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: "#9C9289", display: "block", marginBottom: 8 }}>ค่าใช้จ่ายโดยประมาณ (฿)</label>
+                      <input
+                        type="number" min={0} value={estimatedCost}
+                        onChange={e => setEstimatedCost(e.target.value === "" ? "" : Number(e.target.value))}
+                        style={{
+                          width: "100%", padding: "10px 14px", borderRadius: 12,
+                          border: "1px solid rgba(0,0,0,0.1)", fontSize: 14,
+                          outline: "none", background: "#F8F6F2", boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 700, color: "#9C9289", display: "block", marginBottom: 8 }}>ค่าใช้จ่ายจริง (฿)</label>
+                      <input
+                        type="number" min={0} value={actualCost}
+                        onChange={e => setActualCost(e.target.value === "" ? "" : Number(e.target.value))}
+                        style={{
+                          width: "100%", padding: "10px 14px", borderRadius: 12,
+                          border: "1px solid rgba(0,0,0,0.1)", fontSize: 14,
+                          outline: "none", background: "#F8F6F2", boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
+                  </div>
                 )}
-                <button onClick={() => updateStatus("closed")} disabled={!!acting}
-                  style={{ padding:"8px 16px", borderRadius:12, fontSize:13, fontWeight:600, background:"white", color:"var(--muted)", border:"1px solid var(--border)", cursor:"pointer" }}>
-                  ปิดงาน
-                </button>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {nextStatus && (
+                    <button
+                      onClick={() => updateStatus(nextStatus)}
+                      disabled={!!acting}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 8,
+                        padding: "12px 24px", borderRadius: 14, fontSize: 14, fontWeight: 800,
+                        background: "linear-gradient(135deg, #a78bfa, #7C3AED)", color: "white",
+                        border: "none", cursor: acting ? "not-allowed" : "pointer",
+                        opacity: acting ? 0.6 : 1,
+                      }}
+                    >
+                      {acting === nextStatus && <Loader2 size={14} className="animate-spin" />}
+                      {nextLabel[nextStatus] ?? nextStatus}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => updateStatus("closed")}
+                    disabled={!!acting}
+                    style={{
+                      padding: "12px 24px", borderRadius: 14, fontSize: 14, fontWeight: 800,
+                      background: "white", color: "#9C9289",
+                      border: "1px solid rgba(0,0,0,0.1)", cursor: acting ? "not-allowed" : "pointer",
+                      opacity: acting ? 0.6 : 1,
+                    }}
+                  >
+                    ปิดงาน
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>
