@@ -39,7 +39,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: session } = useSession();
 
-  if (pathname === "/login") return <>{children}</>;
+  if (pathname === "/login" || pathname === "/setup-name") return <>{children}</>;
 
   const segments = pathname.split("/").filter(Boolean);
   const isSubPage = segments.length >= 2;
