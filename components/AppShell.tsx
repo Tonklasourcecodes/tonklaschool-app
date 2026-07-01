@@ -1,10 +1,10 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   LayoutDashboard, FileText, Hammer, ShoppingCart, ShoppingBasket,
-  Wrench, HardHat, Settings, ChevronRight, Bell, LogOut, Package,
+  Wrench, HardHat, Settings, ChevronRight, Bell, LogOut, Package, ArrowLeft,
 } from "lucide-react";
 
 const NAV = [
@@ -34,7 +34,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
 
+  const router = useRouter();
+
   if (pathname === "/login") return <>{children}</>;
+
+  const segments = pathname.split("/").filter(Boolean);
+  const isSubPage = segments.length >= 2; // e.g. /po/PO-001, /food/new
 
   const userName = (session?.user as { userName?: string; approverName?: string })?.approverName
     ?? (session?.user as { userName?: string })?.userName
@@ -127,8 +132,25 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           background: "rgba(237,234,230,0.8)", backdropFilter: "blur(8px)",
           borderBottom: "1px solid rgba(0,0,0,0.06)",
         }}>
-          {/* Breadcrumb */}
-          <Breadcrumb pathname={pathname} />
+          {/* Back button + Breadcrumb */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {isSubPage && (
+              <button
+                onClick={() => router.back()}
+                style={{
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "5px 10px", borderRadius: 8, border: "1px solid rgba(0,0,0,0.08)",
+                  background: "white", color: "#5C5450", fontSize: 12, fontWeight: 600,
+                  cursor: "pointer", boxShadow: "0 1px 3px rgba(0,0,0,0.05)", transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#F0FDF4"; (e.currentTarget as HTMLButtonElement).style.color = "#059669"; (e.currentTarget as HTMLButtonElement).style.borderColor = "#BBF7D0"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "white"; (e.currentTarget as HTMLButtonElement).style.color = "#5C5450"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(0,0,0,0.08)"; }}
+              >
+                <ArrowLeft size={13} /> ย้อนกลับ
+              </button>
+            )}
+            <Breadcrumb pathname={pathname} />
+          </div>
 
           {/* Right */}
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
