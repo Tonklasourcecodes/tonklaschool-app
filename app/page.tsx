@@ -2,11 +2,12 @@
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ShoppingBasket, Wrench, ArrowRight, Clock, CheckCircle, AlertTriangle } from "lucide-react";
+import { ShoppingBasket, Wrench, ArrowRight, Clock, CheckCircle, AlertTriangle, ShoppingCart, HardHat, FileText, Hammer } from "lucide-react";
 
 interface Stats {
   food: { pending: number; total: number };
   maintenance: { open: number; urgent: number; total: number };
+  orders: { pending: number; total: number };
 }
 
 export default function HomePage() {
@@ -19,9 +20,11 @@ export default function HomePage() {
     Promise.all([
       fetch("/api/food").then((r) => r.json()),
       fetch("/api/maintenance").then((r) => r.json()),
-    ]).then(([fd, md]) => {
+      fetch("/api/monthly-orders").then((r) => r.json()),
+    ]).then(([fd, md, od]) => {
       const foodOrders = fd.orders ?? [];
       const maintReqs = md.requests ?? [];
+      const monthlyOrders = od.orders ?? [];
       setStats({
         food: {
           pending: foodOrders.filter((o: { status: string }) => o.status === "pending").length,
@@ -31,6 +34,10 @@ export default function HomePage() {
           open: maintReqs.filter((r: { status: string }) => r.status === "open").length,
           urgent: maintReqs.filter((r: { priority: string; status: string }) => r.priority === "urgent" && r.status !== "closed").length,
           total: maintReqs.length,
+        },
+        orders: {
+          pending: monthlyOrders.filter((o: { status: string }) => o.status === "pending").length,
+          total: monthlyOrders.length,
         },
       });
     }).catch(() => {});
@@ -121,8 +128,76 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* แจ้งซ่อม */}
+        {/* ระบบสั่งซื้อรายเดือน */}
         <div className="anim-in anim-d2">
+          <div className="card overflow-hidden">
+            <div style={{ height:4, background:"linear-gradient(90deg,#0369A1,#38BDF8)" }} />
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div style={{ width:44, height:44, borderRadius:12, background:"#E0F2FE", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <ShoppingCart size={22} style={{ color:"#0369A1" }} strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize:"1.1rem", fontWeight:700, color:"var(--text)" }}>ระบบสั่งซื้อรายเดือน</h2>
+                    <p style={{ fontSize:12, color:"var(--subtle)", marginTop:2 }}>แต่ละแผนกสั่งซื้อสินค้าประจำเดือน</p>
+                  </div>
+                </div>
+                {stats?.orders && (
+                  <div className="flex items-center gap-3">
+                    {stats.orders.pending > 0 && (
+                      <div className="flex items-center gap-1.5" style={{ fontSize:12, color:"#D97706" }}>
+                        <Clock size={13} />
+                        <span>รออนุมัติ {stats.orders.pending}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5" style={{ fontSize:12, color:"var(--subtle)" }}>
+                      <CheckCircle size={13} />
+                      <span>ทั้งหมด {stats.orders.total}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <Link href="/orders" className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5"
+                  style={{ background:"#E0F2FE", color:"#0369A1", border:"1px solid #BAE6FD" }}>
+                  ดูรายการ <ArrowRight size={14} />
+                </Link>
+                <Link href="/orders/new" className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
+                  style={{ background:"linear-gradient(135deg,#0369A1,#0284C7)", color:"white", boxShadow:"0 4px 14px rgba(3,105,161,0.3)" }}>
+                  + สร้างรายการ
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ระบบช่าง */}
+        <div className="anim-in" style={{ animationDelay:"0.15s" }}>
+          <div className="card overflow-hidden">
+            <div style={{ height:4, background:"linear-gradient(90deg,#7C3AED,#C084FC)" }} />
+            <div className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div style={{ width:44, height:44, borderRadius:12, background:"#F5F3FF", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <HardHat size={22} style={{ color:"#7C3AED" }} strokeWidth={1.8} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize:"1.1rem", fontWeight:700, color:"var(--text)" }}>ระบบช่าง</h2>
+                    <p style={{ fontSize:12, color:"var(--subtle)", marginTop:2 }}>ดูรายการแจ้งซ่อมจาก AppSheet</p>
+                  </div>
+                </div>
+              </div>
+              <Link href="/chang" className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5"
+                style={{ background:"#F5F3FF", color:"#7C3AED", border:"1px solid #DDD6FE" }}>
+                ดูข้อมูล <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* แจ้งซ่อม (legacy) */}
+        <div className="anim-in anim-d3">
           <div className="card overflow-hidden">
             <div style={{ height:4, background:"linear-gradient(90deg,#7C3AED,#a78bfa)" }} />
             <div className="p-6">
@@ -164,6 +239,62 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+        {/* PO */}
+        <div className="anim-in" style={{ animationDelay:"0.25s" }}>
+          <div className="card overflow-hidden">
+            <div style={{ height:4, background:"linear-gradient(90deg,#D97706,#F59E0B)" }} />
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div style={{ width:44, height:44, borderRadius:12, background:"#FEF3C7", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <FileText size={22} style={{ color:"#D97706" }} strokeWidth={1.8} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize:"1.1rem", fontWeight:700, color:"var(--text)" }}>ใบสั่งซื้อ (PO)</h2>
+                  <p style={{ fontSize:12, color:"var(--subtle)", marginTop:2 }}>Purchase Orders</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Link href="/po" className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5"
+                  style={{ background:"#FEF3C7", color:"#D97706", border:"1px solid #FDE68A" }}>
+                  ดูรายการ <ArrowRight size={14} />
+                </Link>
+                <Link href="/po/new" className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
+                  style={{ background:"linear-gradient(135deg,#D97706,#F59E0B)", color:"white", boxShadow:"0 4px 14px rgba(217,119,6,0.3)" }}>
+                  + สร้าง PO
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* JO */}
+        <div className="anim-in" style={{ animationDelay:"0.3s" }}>
+          <div className="card overflow-hidden">
+            <div style={{ height:4, background:"linear-gradient(90deg,#0891B2,#22D3EE)" }} />
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div style={{ width:44, height:44, borderRadius:12, background:"#ECFEFF", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <Hammer size={22} style={{ color:"#0891B2" }} strokeWidth={1.8} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize:"1.1rem", fontWeight:700, color:"var(--text)" }}>ใบสั่งจ้าง (JO)</h2>
+                  <p style={{ fontSize:12, color:"var(--subtle)", marginTop:2 }}>Job Orders</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Link href="/jo" className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5"
+                  style={{ background:"#ECFEFF", color:"#0891B2", border:"1px solid #A5F3FC" }}>
+                  ดูรายการ <ArrowRight size={14} />
+                </Link>
+                <Link href="/jo/new" className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all hover:-translate-y-0.5"
+                  style={{ background:"linear-gradient(135deg,#0891B2,#22D3EE)", color:"white", boxShadow:"0 4px 14px rgba(8,145,178,0.3)" }}>
+                  + สร้าง JO
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

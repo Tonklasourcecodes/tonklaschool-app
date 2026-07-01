@@ -1,14 +1,17 @@
 import { google } from "googleapis";
 import type { FoodOrder, MaintenanceRequest } from "./types";
+import type { MonthlyOrder } from "./monthly-order";
 
 function getAuth() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const key = process.env.GOOGLE_PRIVATE_KEY;
   if (!email || !key) return null;
+  // Key stored as raw PEM with literal \n — replace back to newlines
+  const privateKey = key.replace(/\\n/g, "\n");
   return new google.auth.GoogleAuth({
     credentials: {
       client_email: email,
-      private_key: Buffer.from(key, "base64").toString("utf-8"),
+      private_key: privateKey,
     },
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
@@ -116,6 +119,73 @@ export async function syncMaintenanceToSheet(req: MaintenanceRequest): Promise<v
       req.created_at,
     ];
     await updateRowByNumber("แจ้งซ่อม", "A", req.request_number, row);
+  } catch {
+    // Background sync — silently ignore errors
+  }
+}
+
+export async function syncMonthlyOrderToSheet(order: MonthlyOrder): Promise<void> {
+  const id = process.env.MONTHLY_ORDER_SPREADSHEET_ID;
+  if (!id) return;
+  try {
+    const auth = getAuth();
+    if (!auth) return;
+    const sheets = google.sheets({ version: "v4", auth });
+    const primaryKey = `${order.department}-${order.order_month}-${order.order_year}`;
+
+    // Each line item becomes a row in OrderData
+    const items = order.items ?? [];
+    if (!items.length) return;
+
+    // Find existing rows for this order and remove them first
+    const { data: existing } = await sheets.spreadsheets.values.get({
+      spreadsheetId: id,
+      range: "3.OrderData!A:M",
+    });
+    const rows = existing.values ?? [];
+    const toDelete: number[] = [];
+    rows.forEach((r, idx) => {
+      if (String(r[12] ?? "").startsWith(primaryKey)) toDelete.push(idx + 1);
+    });
+
+    // Delete from bottom up to preserve row indices
+    for (const rowNum of toDelete.sort((a, b) => b - a)) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId: id,
+        requestBody: {
+          requests: [{
+            deleteDimension: {
+              range: { sheetId: 0, dimension: "ROWS", startIndex: rowNum - 1, endIndex: rowNum },
+            },
+          }],
+        },
+      });
+    }
+
+    // Append new rows
+    const newRows = items.map((item, i) => [
+      "",                         // ลำดับ (auto)
+      item.item_name,             // ชื่อสินค้า
+      order.department,           // แผนกที่สั่ง
+      order.order_month,          // เดือนที่สั่ง
+      order.order_year,           // ปีที่สั่ง
+      item.quantity,              // จำนวน
+      item.store,                 // ร้านค้า
+      item.item_type,             // ประเภท
+      item.notes ?? "",           // หมายเหตุ
+      item.unit,                  // หน่วย
+      item.unit_price,            // ราคา
+      item.total_price,           // รวมเงิน
+      `${primaryKey}-${i + 1}`,  // Primarykey
+    ]);
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: id,
+      range: "3.OrderData!A:M",
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: newRows },
+    });
   } catch {
     // Background sync — silently ignore errors
   }
